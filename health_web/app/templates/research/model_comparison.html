@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}模型对比详情 - 研究者专区{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('research.index') }}">数据分析展示</a></li>
+            <li class="breadcrumb-item active">模型对比详情</li>
+        </ol>
+    </nav>
+
+    <h3 class="mb-4"><i class="fa fa-balance-scale text-primary me-2"></i>多模型性能深度对比</h3>
+
+    <!-- 最优模型高亮 -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-success shadow">
+                <div class="card-header bg-success text-white text-center">
+                    <h5 class="mb-0"><i class="fa fa-trophy me-2"></i>最优模型</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="display-4 text-success mb-3">{{ feature_info.best_model }}</h2>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <div class="h4 text-primary">{{ "%.2f"|format(feature_info.test_accuracy_after*100) }}%</div>
+                                <small class="text-muted">测试集准确率</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <div class="h4 text-info">{{ feature_info.selected_features|length }}</div>
+                                <small class="text-muted">特征数</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <div class="h4 text-warning">5折CV</div>
+                                <small class="text-muted">交叉验证</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模型对比表格 -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">
+            <i class="fa fa-table me-2"></i>完整对比结果
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="comparisonTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center">排名</th>
+                            <th>模型</th>
+                            <th class="text-end">5折CV均值</th>
+                            <th class="text-end">5折CV标准差</th>
+                            <th class="text-end">测试集准确率</th>
+                            <th class="text-end">F1(宏)</th>
+                            <th class="text-end">F1(加权)</th>
+                            <th class="text-end">精确率</th>
+                            <th class="text-end">召回率</th>
+                            <th class="text-end">AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for model in model_comparison %}
+                        <tr class="{% if loop.index == 1 %}table-success fw-bold{% elif loop.index <= 3 %}table-info{% endif %}">
+                            <td class="text-center">
+                                {% if loop.index == 1 %}
+                                <span class="badge bg-warning text-dark fs-6"><i class="fa fa-trophy"></i> 1</span>
+                                {% elif loop.index == 2 %}
+                                <span class="badge bg-secondary fs-6">2</span>
+                                {% elif loop.index == 3 %}
+                                <span class="badge bg-secondary fs-6">3</span>
+                                {% else %}
+                                <span class="text-muted">{{ loop.index }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ model['模型'] }}</td>
+                            <td class="text-end">{{ "%.4f"|format(model['5折CV均值']) }}</td>
+                            <td class="text-end">{{ "%.4f"|format(model['5折CV标准差']) }}</td>
+                            <td class="text-end {% if model['测试集准确率'] >= 0.9 %}text-success fw-bold{% endif %}">
+                                {{ "%.4f"|format(model['测试集准确率']) }}
+                            </td>
+                            <td class="text-end">{{ "%.4f"|format(model['测试集F1(宏)']) }}</td>
+                            <td class="text-end">{{ "%.4f"|format(model['测试集F1(加权)']) }}</td>
+                            <td class="text-end">{{ "%.4f"|format(model['测试集精确率(加权)']) }}</td>
+                            <td class="text-end">{{ "%.4f"|format(model['测试集召回率(加权)']) }}</td>
+                            <td class="text-end">
+                                {% if model['测试集AUC(OVR)'] != 'N/A' %}
+                                    {{ "%.4f"|format(model['测试集AUC(OVR)']|float) }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模型选择分析 -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <i class="fa fa-check-circle me-2"></i>选择 XGBoost 的理由
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="fa fa-arrow-up text-success me-2"></i>
+                            <strong>准确率最高：</strong>在9个对比模型中测试集准确率排名第一
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fa fa-chart-line text-success me-2"></i>
+                            <strong>AUC表现优异：</strong>多分类OVR平均AUC接近0.99
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fa fa-bolt text-success me-2"></i>
+                            <strong>训练速度快：</strong>支持并行计算，n_jobs=-1
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fa fa-cogs text-success me-2"></i>
+                            <strong>超参数丰富：</strong>支持精细调参，提升空间大
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fa fa-eye text-success me-2"></i>
+                            <strong>可解释性强：</strong>内置特征重要性计算
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fa fa-exclamation-triangle me-2"></i>其他模型表现分析
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-light border">
+                        <strong>随机森林 (RF)：</strong>
+                        <span class="text-muted">表现稳定，但略逊于XGBoost，可能因特征间存在相关性导致投票效果下降。</span>
+                    </div>
+                    <div class="alert alert-light border">
+                        <strong>极端随机树 (ET)：</strong>
+                        <span class="text-muted">与RF类似，随机性更强，在某些数据集上可能表现更好。</span>
+                    </div>
+                    <div class="alert alert-light border">
+                        <strong>梯度提升树 (GBT)：</strong>
+                        <span class="text-muted">sklearn原生实现，效果与XGBoost接近但训练速度较慢。</span>
+                    </div>
+                    <div class="alert alert-warning border">
+                        <strong>支持向量机 (SVM)：</strong>
+                        <span class="text-muted">在中小样本上表现出色，但对本数据集(2万+样本)计算开销较大，核函数选择敏感。</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 表格排序功能
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('comparisonTable');
+    if (table) {
+        // 可以在这里添加表格排序逻辑
+    }
+});
+</script>
+{% endblock %}

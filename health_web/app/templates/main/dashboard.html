@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 健康管家{% endblock %}
+{% block topbar_title %}仪表盘{% endblock %}
+
+{% block content %}
+{% if demo %}
+<div class="demo-banner">
+  <i class="fa fa-info-circle"></i>
+  当前为演示数据展示。<a href="{{ url_for('auth.login') }}" style="color:#fff;font-weight:700;text-decoration:underline;margin-left:6px;">登录</a> 或 <a href="{{ url_for('auth.register') }}" style="color:#fff;font-weight:700;text-decoration:underline;">注册</a> 即可使用全功能，或用测试账号 demo / demo123456 体验。
+</div>
+{% endif %}
+
+<!-- 日期显示 -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="page-header mb-0">
+    <h1>今日概览</h1>
+    <p id="current-date" style="margin:0;"></p>
+  </div>
+  {% if not demo %}
+  <a href="{{ url_for('predict.index') }}" class="btn btn-primary">
+    <i class="fa fa-stethoscope me-2"></i>快速风险判定
+  </a>
+  {% endif %}
+</div>
+
+<!-- 连续打卡 + 徽章（仅登录用户） -->
+{% if not demo %}
+<div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+  <div style="background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;padding:8px 18px;border-radius:30px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;">
+    <i class="fa fa-fire"></i>
+    连续打卡 <span style="font-size:20px;">{{ streak }}</span> 天
+  </div>
+  {% for badge in badges %}
+  <div class="d-flex align-items-center gap-1 px-3 py-2 rounded-pill"
+       style="background:{{ '#d4f5e2' if badge.unlocked else 'var(--bg-body)' }};border:1.5px solid {{ badge.color }};font-size:12.5px;font-weight:600;color:{{ badge.color if badge.unlocked else 'var(--text-muted)' }};">
+    <i class="fa {{ badge.icon }}"></i>
+    {{ badge.name }}
+    {% if not badge.unlocked %}
+    <span style="font-size:11px;opacity:.7;margin-left:2px;">({{ badge.progress }}%)</span>
+    {% else %}
+    <i class="fa fa-check" style="font-size:10px;margin-left:2px;"></i>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- 顶部统计卡片 -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-green">
+      <div class="stat-icon"><i class="fa fa-fire"></i></div>
+      <div class="stat-value">
+        {% if demo %}{{ demo_data.today_calories_in | round1 }}{% else %}{{ today_calories_in | round1 }}{% endif %}
+        <span class="stat-unit">kcal</span>
+      </div>
+      <div class="stat-label">今日摄入热量</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-blue">
+      <div class="stat-icon"><i class="fa fa-bolt"></i></div>
+      <div class="stat-value">
+        {% if demo %}{{ demo_data.today_calories_out | round1 }}{% else %}{{ today_calories_out | round1 }}{% endif %}
+        <span class="stat-unit">kcal</span>
+      </div>
+      <div class="stat-label">今日消耗热量</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-orange">
+      <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
+      <div class="stat-value">
+        {% if demo %}{{ demo_data.today_duration | round1 }}{% else %}{{ today_duration | round1 }}{% endif %}
+        <span class="stat-unit">min</span>
+      </div>
+      <div class="stat-label">今日运动时长</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-purple">
+      <div class="stat-icon"><i class="fa fa-balance-scale"></i></div>
+      <div class="stat-value">
+        {% if demo %}{{ demo_data.bmi | round1 }}{% elif latest_health %}{{ latest_health.bmi | round1 }}{% else %}{{ current_user.bmi | round1 }}{% endif %}
+        <span class="stat-unit">BMI</span>
+      </div>
+      <div class="stat-label">当前 BMI 指数</div>
+    </div>
+  </div>
+</div>
+
+<!-- 图表区 -->
+<div class="row g-3 mb-4">
+  <!-- 热量趋势 -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="fa fa-line-chart me-2" style="color:var(--primary);"></i>近7天热量收支</span>
+      </div>
+      <div class="card-body">
+        <div id="chart-calorie" class="chart-300"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 今日营养素 -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="fa fa-pie-chart me-2" style="color:var(--primary);"></i>今日营养素分布</div>
+      <div class="card-body">
+        <div id="chart-nutrition-today" class="chart-200"></div>
+        <div class="nutrition-bar-group">
+          <div class="nutrition-row">
+            <span class="nutrition-label" style="color:#1a73e8;">碳水</span>
+            <div class="progress flex-1" style="flex:1;">
+              <div class="progress-bar" style="background:#1a73e8;width:{% if demo %}{{ (demo_data.today_carbs / 300 * 100)|round|int }}{% else %}{{ [((today_carbs or 0) / 300 * 100)|round|int, 100]|min }}{% endif %}%;"></div>
+            </div>
+            <span class="nutrition-val">{% if demo %}{{ demo_data.today_carbs | round1 }}{% else %}{{ today_carbs | round1 }}{% endif %}g</span>
+          </div>
+          <div class="nutrition-row">
+            <span class="nutrition-label" style="color:#2d8653;">蛋白</span>
+            <div class="progress flex-1" style="flex:1;">
+              <div class="progress-bar" style="background:#2d8653;width:{% if demo %}{{ (demo_data.today_protein / 100 * 100)|round|int }}{% else %}{{ [((today_protein or 0) / 100 * 100)|round|int, 100]|min }}{% endif %}%;"></div>
+            </div>
+            <span class="nutrition-val">{% if demo %}{{ demo_data.today_protein | round1 }}{% else %}{{ today_protein | round1 }}{% endif %}g</span>
+          </div>
+          <div class="nutrition-row">
+            <span class="nutrition-label" style="color:#f0a500;">脂肪</span>
+            <div class="progress flex-1" style="flex:1;">
+              <div class="progress-bar" style="background:#f0a500;width:{% if demo %}{{ (demo_data.today_fat / 80 * 100)|round|int }}{% else %}{{ [((today_fat or 0) / 80 * 100)|round|int, 100]|min }}{% endif %}%;"></div>
+            </div>
+            <span class="nutrition-val">{% if demo %}{{ demo_data.today_fat | round1 }}{% else %}{{ today_fat | round1 }}{% endif %}g</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 最新风险 + 快捷记录 -->
+<div class="row g-3">
+  <!-- 风险状态 -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header"><i class="fa fa-shield me-2" style="color:var(--primary);"></i>肥胖风险状态</div>
+      <div class="card-body text-center">
+        {% set risk_level = demo_data.risk_level if demo else (latest_predict.risk_level if latest_predict else 'none') %}
+        {% set risk_label = demo_data.risk_label if demo else (latest_predict.result_label if latest_predict else '--') %}
+        <div style="font-size:48px;margin-bottom:10px;">
+          {% if risk_level == 'normal' %}🟢{% elif risk_level == 'high' %}🔴{% elif risk_level == 'mid' %}🟡{% else %}⚪{% endif %}
+        </div>
+        <div class="badge {% if risk_level == 'normal' %}badge-risk-low{% elif risk_level == 'high' %}badge-risk-high{% else %}badge-risk-mid{% endif %}" style="font-size:16px;padding:10px 20px;">
+          {% if risk_level == 'normal' %}低{% elif risk_level == 'high' %}高{% elif risk_level == 'mid' %}中{% else %}未评估{% endif %} 风险
+        </div>
+        <div style="margin-top:12px;font-size:14px;color:var(--text-muted);">
+          {{ risk_label if risk_label != '--' else '尚未进行评估' }}
+        </div>
+        <a href="{{ url_for('predict.index') }}" class="btn btn-outline-primary btn-sm mt-3">
+          <i class="fa fa-refresh me-1"></i>重新评估
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最近饮食 -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fa fa-cutlery me-2" style="color:var(--primary);"></i>最近饮食</span>
+        <a href="{{ url_for('diet.index') }}" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i></a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% set diet_list = demo_data.recent_diet if demo else [] %}
+          {% for item in diet_list[:5] %}
+          <li class="list-group-item" style="border-color:var(--border);padding:10px 18px;font-size:13.5px;">
+            <div class="d-flex justify-content-between align-items-center">
+              <span style="font-weight:600;">{{ item.food_name }}</span>
+              <span style="color:var(--primary);font-weight:700;">{{ item.calories }} kcal</span>
+            </div>
+            <div style="color:var(--text-muted);font-size:12px;">{{ item.meal_type }} · {{ item.amount_g }}g</div>
+          </li>
+          {% else %}
+          <li class="list-group-item text-center py-4" style="color:var(--text-muted);font-size:13px;">
+            <i class="fa fa-cutlery d-block mb-2" style="font-size:24px;opacity:.3;"></i>
+            暂无记录，<a href="{{ url_for('diet.index') }}">去添加</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最近运动 -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fa fa-bicycle me-2" style="color:var(--primary);"></i>最近运动</span>
+        <a href="{{ url_for('exercise.index') }}" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i></a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% set ex_list = demo_data.recent_exercise if demo else [] %}
+          {% for item in ex_list[:5] %}
+          <li class="list-group-item" style="border-color:var(--border);padding:10px 18px;font-size:13.5px;">
+            <div class="d-flex justify-content-between align-items-center">
+              <span style="font-weight:600;">{{ item.exercise_name }}</span>
+              <span style="color:#e8710a;font-weight:700;">-{{ item.calories_burned | round1 }} kcal</span>
+            </div>
+            <div style="color:var(--text-muted);font-size:12px;"><i class="fa fa-clock-o me-1"></i>{{ item.duration_min }} 分钟</div>
+          </li>
+          {% else %}
+          <li class="list-group-item text-center py-4" style="color:var(--text-muted);font-size:13px;">
+            <i class="fa fa-bicycle d-block mb-2" style="font-size:24px;opacity:.3;"></i>
+            暂无记录，<a href="{{ url_for('exercise.index') }}">去添加</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('current-date').textContent = new Date().toLocaleDateString('zh-CN', {
+  year:'numeric', month:'long', day:'numeric', weekday:'long'
+});
+
+// 热量趋势折线图
+(function(){
+  {% if demo %}
+  const wData = {{ demo_data.weekly_data | tojson }};
+  {% else %}
+  const wData = {{ weekly_data | tojson }};
+  {% endif %}
+
+  const chart = echarts.init(document.getElementById('chart-calorie'));
+  chart.setOption({
+    tooltip: { trigger: 'axis', ...HP.chartTheme.tooltip,
+      formatter: function(params){
+        let s = `<b>${params[0].axisValue}</b><br>`;
+        params.forEach(p => { s += `${p.marker}${p.seriesName}: ${p.value} kcal<br>`; });
+        return s;
+      }
+    },
+    legend: { data: ['摄入', '消耗'], ...HP.chartTheme.legend, top: 0 },
+    grid:   { ...HP.chartTheme.grid },
+    xAxis:  { type:'category', data: wData.dates, axisLabel: HP.chartTheme.axisLabel, axisLine: HP.chartTheme.axisLine },
+    yAxis:  { type:'value', axisLabel: {...HP.chartTheme.axisLabel, formatter:'{value} kcal'}, splitLine: HP.chartTheme.splitLine },
+    series: [
+      { name:'摄入', type:'line', data: wData.calories_in,
+        smooth:true, symbol:'circle', symbolSize:7,
+        lineStyle:{ color:'#2d8653', width:3 },
+        itemStyle:{ color:'#2d8653' },
+        areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[
+          {offset:0,color:'rgba(45,134,83,.25)'},{offset:1,color:'rgba(45,134,83,.02)'}
+        ]}},
+      },
+      { name:'消耗', type:'line', data: wData.calories_out,
+        smooth:true, symbol:'circle', symbolSize:7,
+        lineStyle:{ color:'#1a73e8', width:3 },
+        itemStyle:{ color:'#1a73e8' },
+        areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[
+          {offset:0,color:'rgba(26,115,232,.20)'},{offset:1,color:'rgba(26,115,232,.02)'}
+        ]}},
+      }
+    ]
+  });
+  window.addEventListener('resize', ()=>chart.resize());
+})();
+
+// 今日营养素饼图
+(function(){
+  {% if demo %}
+  const p = {{ demo_data.today_protein | round1 }}, f = {{ demo_data.today_fat | round1 }}, c = {{ demo_data.today_carbs | round1 }};
+  {% else %}
+  const p = {{ today_protein or 0 }}, f = {{ today_fat or 0 }}, c = {{ today_carbs or 0 }};
+  {% endif %}
+
+  const chart = echarts.init(document.getElementById('chart-nutrition-today'));
+  chart.setOption({
+    tooltip: { trigger:'item', formatter: '{b}: {c}g ({d}%)' },
+    legend:  { bottom: 0, textStyle: HP.chartTheme.textStyle },
+    series: [{
+      type:'pie', radius:['45%','72%'], center:['50%','45%'],
+      data: [
+        { value: c, name:'碳水', itemStyle:{ color:'#1a73e8' } },
+        { value: p, name:'蛋白', itemStyle:{ color:'#2d8653' } },
+        { value: f, name:'脂肪', itemStyle:{ color:'#f0a500' } },
+      ],
+      label:{ show:false },
+      emphasis:{ itemStyle:{ shadowBlur:12, shadowColor:'rgba(0,0,0,.15)' } }
+    }]
+  });
+  window.addEventListener('resize', ()=>chart.resize());
+})();
+</script>
+{% endblock %}

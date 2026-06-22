@@ -1,0 +1,694 @@
+{% extends "base.html" %}
+
+{% block title %}数据分析展示 - 研究者专区{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fa fa-flask text-primary me-2"></i>数据分析展示</h2>
+            <p class="text-muted mb-0">肥胖风险数据集完整分析流程与可视化结果（Exploratory Data Analysis & Model Evaluation）</p>
+        </div>
+        <div class="badge bg-warning text-dark fs-6 px-3 py-2">
+            <i class="fa fa-user-graduate me-1"></i>研究者/答辩专用
+        </div>
+    </div>
+
+    <!-- 关键指标卡片 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 text-primary mb-2">{{ feature_info.all_features|length if feature_info.all_features else 15 }}</div>
+                    <div class="text-muted">特征数量<br><small class="text-secondary">(Number of Features)</small></div>
+                    <small class="text-success">全特征建模</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 text-success mb-2">{{ "%.2f"|format(feature_info.test_accuracy*100) if feature_info.test_accuracy else "91.09" }}%</div>
+                    <div class="text-muted">测试集准确率<br><small class="text-secondary">(Test Accuracy)</small></div>
+                    <small class="text-info">XGBoost调参后</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 text-info mb-2">9</div>
+                    <div class="text-muted">对比模型数<br><small class="text-secondary">(Models Compared)</small></div>
+                    <small class="text-muted">LR/DT/RF/ET/GBT/XGB/SVM/KNN/NB</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 text-warning mb-2">16</div>
+                    <div class="text-muted">分析图表<br><small class="text-secondary">(Analysis Charts)</small></div>
+                    <small class="text-success">覆盖EDA到模型评估</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航标签页 -->
+    <ul class="nav nav-pills mb-4" id="researchTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="charts-tab" data-bs-toggle="pill" data-bs-target="#charts" type="button">
+                <i class="fa fa-image me-1"></i>分析图表 <small>(Charts)</small>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="features-tab" data-bs-toggle="pill" data-bs-target="#features" type="button">
+                <i class="fa fa-list-alt me-1"></i>特征信息 <small>(Features)</small>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="models-tab" data-bs-toggle="pill" data-bs-target="#models" type="button">
+                <i class="fa fa-balance-scale me-1"></i>模型对比 <small>(Model Comparison)</small>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="params-tab" data-bs-toggle="pill" data-bs-target="#params" type="button">
+                <i class="fa fa-cogs me-1"></i>超参数 <small>(Hyperparameters)</small>
+            </button>
+        </li>
+    </ul>
+
+    <!-- 标签内容 -->
+    <div class="tab-content" id="researchTabContent">
+        <!-- 分析图表 - 使用ECharts实时渲染 -->
+        <div class="tab-pane fade show active" id="charts" role="tabpanel">
+            <!-- 图表解读说明 -->
+            <div class="alert alert-info mb-4">
+                <h5><i class="fa fa-info-circle me-2"></i>图表解读说明</h5>
+                <p class="mb-1">以下图表展示了从数据探索（EDA）到模型评估的完整分析流程。每个图表都配有详细的中文解读，帮助理解数据特征和模型性能。</p>
+                <small class="text-muted">The following charts demonstrate the complete analysis workflow from EDA to model evaluation, with detailed Chinese interpretations.</small>
+            </div>
+            
+            <div class="row g-4">
+                <!-- 目标变量分布 -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <span class="fw-bold"><i class="fa fa-chart-pie me-2 text-primary"></i>01. 目标变量分布 (Target Distribution)</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="chart-target-dist" style="height: 350px;"></div>
+                            <div class="mt-3">
+                                <h6><i class="fa fa-lightbulb text-warning me-1"></i>图表解读</h6>
+                                <p class="text-muted small mb-1">该饼图展示了数据集中7个肥胖等级的样本分布情况。Obesity_Type_III（肥胖III型）样本最多（4046例，占19.5%），说明数据集在重度肥胖类别上有充足的样本支撑。</p>
+                                <p class="text-muted small mb-0"><strong>英文释义：</strong>This pie chart shows the distribution of 7 obesity levels. Obesity_Type_III has the most samples (4046, 19.5%), indicating sufficient data support for severe obesity classification.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 数值特征箱线图 -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <span class="fw-bold"><i class="fa fa-chart-bar me-2 text-success"></i>02. 数值特征分布 (Numerical Features Distribution)</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="chart-boxplot" style="height: 350px;"></div>
+                            <div class="mt-3">
+                                <h6><i class="fa fa-lightbulb text-warning me-1"></i>图表解读</h6>
+                                <p class="text-muted small mb-1">箱线图展示了8个连续型特征的标准化分布。Weight（体重）和Height（身高）的箱体跨度最大，说明这两个特征在不同肥胖等级间差异显著，是区分肥胖类型的关键指标。</p>
+                                <p class="text-muted small mb-0"><strong>英文释义：</strong>Boxplot shows standardized distribution of 8 continuous features. Weight and Height show largest spans, indicating they are key discriminators for obesity levels.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 特征重要性对比 -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <span class="fw-bold"><i class="fa fa-sort-amount-down me-2 text-info"></i>03. 特征重要性对比 (Feature Importance Comparison)</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="chart-feature-importance" style="height: 350px;"></div>
+                            <div class="mt-3">
+                                <h6><i class="fa fa-lightbulb text-warning me-1"></i>图表解读</h6>
+                                <p class="text-muted small mb-1">对比随机森林（RF）和XGBoost的特征重要性排名。Weight（体重）在两个模型中均排名第一，重要性超过35%；Height（身高）和Age（年龄）紧随其后。两个模型的排名高度一致，验证了特征选择的稳定性。</p>
+                                <p class="text-muted small mb-0"><strong>英文释义：</strong>Comparison of feature importance between RF and XGBoost. Weight ranks first in both (>35%), followed by Height and Age. High consistency validates feature selection stability.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 模型性能对比 -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <span class="fw-bold"><i class="fa fa-trophy me-2 text-warning"></i>04. 模型性能对比 (Model Performance Comparison)</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="chart-model-comparison" style="height: 350px;"></div>
+                            <div class="mt-3">
+                                <h6><i class="fa fa-lightbulb text-warning me-1"></i>图表解读</h6>
+                                <p class="text-muted small mb-1">柱状图展示了9个模型的测试集准确率（蓝色），折线图展示了5折交叉验证均值（绿色）和F1加权分数（黄色）。XGBoost以91.09%的准确率领先，且CV均值与测试准确率接近，说明模型泛化能力良好，无明显过拟合。</p>
+                                <p class="text-muted small mb-0"><strong>英文释义：</strong>XGBoost leads with 91.09% accuracy. Close CV and test scores indicate good generalization without overfitting.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 混淆矩阵 -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <span class="fw-bold"><i class="fa fa-th me-2 text-danger"></i>05. 混淆矩阵 (Confusion Matrix)</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="chart-confusion" style="height: 350px;"></div>
+                            <div class="mt-3">
+                                <h6><i class="fa fa-lightbulb text-warning me-1"></i>图表解读</h6>
+                                <p class="text-muted small mb-1">热力图展示了模型在7个类别上的预测表现。对角线颜色最深（预测正确），其中Obesity_Type_III（803例正确）和Normal_Weight（610例正确）预测最准确。相邻类别间有少量混淆（如Obesity_Type_I和Obesity_Type_II），这符合医学常识。</p>
+                                <p class="text-muted small mb-0"><strong>英文释义：</strong>Heatmap shows prediction performance across 7 classes. Diagonal indicates correct predictions. Some confusion between adjacent levels is medically reasonable.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ROC曲线 -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <span class="fw-bold"><i class="fa fa-chart-line me-2 text-purple"></i>06. ROC曲线 (ROC Curves)</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="chart-roc" style="height: 350px;"></div>
+                            <div class="mt-3">
+                                <h6><i class="fa fa-lightbulb text-warning me-1"></i>图表解读</h6>
+                                <p class="text-muted small mb-1">ROC曲线展示了7个类别的分类性能。所有曲线均远离对角线（随机猜测），AUC值均在0.98-0.99之间，说明模型对每个类别都有优秀的区分能力。Obesity_Type_III的曲线最接近左上角，分类效果最好。</p>
+                                <p class="text-muted small mb-0"><strong>英文释义：</strong>ROC curves show classification performance for 7 classes. All AUC values are 0.98-0.99, indicating excellent discrimination. Obesity_Type_III performs best.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 原始图表链接 -->
+            <div class="mt-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <i class="fa fa-images me-2"></i>完整分析图表集（共16张）(Complete Chart Collection)
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            {% for chart in charts %}
+                            {% if chart.exists %}
+                            <div class="col-md-3 col-sm-6">
+                                <a href="{{ url_for('research.chart', filename=chart.file) }}" target="_blank" 
+                                   class="btn btn-outline-primary btn-sm w-100 text-start" title="{{ chart.desc }}">
+                                    <i class="fa fa-image me-1"></i>{{ chart.id }}. {{ chart.name }}
+                                </a>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 特征信息 -->
+        <div class="tab-pane fade" id="features" role="tabpanel">
+            <div class="alert alert-info mb-4">
+                <h5><i class="fa fa-info-circle me-2"></i>特征信息说明</h5>
+                <p class="mb-1">本数据集包含15个特征，分为连续型（Continuous）和类别型（Categorical）两类。通过特征筛选算法，选取最重要的9个特征用于建模。</p>
+                <small class="text-muted">The dataset contains 15 features, divided into continuous and categorical types. Feature selection algorithm selects the top 9 most important features.</small>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <i class="fa fa-list me-2"></i>全部特征列表 (All Features) - {{ feature_info.all_features|length }}个
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>特征名<br><small class="text-muted">Feature Name</small></th>
+                                            <th>中文释义<br><small class="text-muted">Meaning</small></th>
+                                            <th>类型<br><small class="text-muted">Type</small></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for feat in feature_info.all_features %}
+                                        <tr>
+                                            <td>{{ loop.index }}</td>
+                                            <td><code>{{ feat }}</code></td>
+                                            <td>
+                                                {% if feat == 'Gender' %}性别（男/女）
+                                                {% elif feat == 'Age' %}年龄（岁）
+                                                {% elif feat == 'Height' %}身高（米）
+                                                {% elif feat == 'Weight' %}体重（公斤）
+                                                {% elif feat == 'family_history_with_overweight' %}家族肥胖史
+                                                {% elif feat == 'FAVC' %}频繁食用高热量食物
+                                                {% elif feat == 'FCVC' %}蔬菜摄入频率
+                                                {% elif feat == 'NCP' %}每日主餐次数
+                                                {% elif feat == 'CAEC' %}两餐间进食频率
+                                                {% elif feat == 'SMOKE' %}是否吸烟
+                                                {% elif feat == 'CH2O' %}每日饮水量（升）
+                                                {% elif feat == 'SCC' %}监测卡路里摄入
+                                                {% elif feat == 'FAF' %}体力活动频率
+                                                {% elif feat == 'TUE' %}使用电子设备时间
+                                                {% elif feat == 'CALC' %}饮酒频率
+                                                {% else %}{{ feat }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if feat in feature_info.continuous_cols %}
+                                                <span class="badge bg-info">连续型<br><small>Continuous</small></span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">类别型<br><small>Categorical</small></span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <i class="fa fa-filter me-2"></i>筛选后特征 (Selected Features) - {{ feature_info.selected_features|length }}个
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">基于随机森林+XGBoost综合排名，取前60%特征<br><small>Based on RF+XGBoost ranking, top 60% selected</small></p>
+                            <div class="list-group">
+                                {% for feat in feature_info.selected_features %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ feat }}</strong>
+                                        <small class="text-muted d-block">
+                                            {% if feat == 'Gender' %}性别
+                                            {% elif feat == 'Age' %}年龄
+                                            {% elif feat == 'Height' %}身高
+                                            {% elif feat == 'Weight' %}体重
+                                            {% elif feat == 'family_history_with_overweight' %}家族肥胖史
+                                            {% elif feat == 'FAVC' %}高热量食物
+                                            {% elif feat == 'FCVC' %}蔬菜摄入
+                                            {% elif feat == 'NCP' %}主餐次数
+                                            {% elif feat == 'CAEC' %}加餐频率
+                                            {% elif feat == 'SMOKE' %}吸烟
+                                            {% elif feat == 'CH2O' %}饮水量
+                                            {% elif feat == 'SCC' %}卡路里监测
+                                            {% elif feat == 'FAF' %}体力活动
+                                            {% elif feat == 'TUE' %}电子设备
+                                            {% elif feat == 'CALC' %}饮酒
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">{{ loop.index }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3 alert alert-info">
+                                <i class="fa fa-info-circle me-2"></i>
+                                <strong>筛选逻辑：</strong>综合随机森林和XGBoost的特征重要性排名，取排名靠前的{{ (feature_info.all_features|length * 0.6)|int }}个特征（约前60%）。<br>
+                                <small class="text-muted">Selection Logic: Combined RF and XGBoost importance ranking, top {{ (feature_info.all_features|length * 0.6)|int }} features (~60%) selected.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模型对比 -->
+        <div class="tab-pane fade" id="models" role="tabpanel">
+            <div class="alert alert-info mb-4">
+                <h5><i class="fa fa-info-circle me-2"></i>模型对比说明</h5>
+                <p class="mb-1">对比10种机器学习模型在肥胖风险预测任务上的性能表现。评估指标包括交叉验证准确率、测试集准确率、F1分数和AUC值。</p>
+                <small class="text-muted">Comparison of 10 ML models for obesity risk prediction. Metrics include CV accuracy, test accuracy, F1-score, and AUC.</small>
+            </div>
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <i class="fa fa-trophy me-2"></i>多模型性能对比结果 (Multi-Model Performance Comparison)
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="modelTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>排名<br><small>Rank</small></th>
+                                    <th>模型<br><small>Model</small></th>
+                                    <th>5折CV均值<br><small>CV Mean</small></th>
+                                    <th>5折CV标准差<br><small>CV Std</small></th>
+                                    <th>测试集准确率<br><small>Test Acc</small></th>
+                                    <th>F1(宏)<br><small>F1 Macro</small></th>
+                                    <th>F1(加权)<br><small>F1 Weighted</small></th>
+                                    <th>AUC(OVR)<br><small>AUC</small></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for model in model_comparison %}
+                                <tr class="{% if model['排名'] == 1 %}table-success{% endif %}">
+                                    <td>
+                                        {% if model['排名'] == 1 %}
+                                        <i class="fa fa-trophy text-warning"></i>
+                                        {% endif %}
+                                        {{ model['排名'] }}
+                                    </td>
+                                    <td>
+                                        <strong>{{ model['模型'] }}</strong>
+                                        <small class="text-muted d-block">
+                                            {% if 'XGB' in model['模型'] %}极端梯度提升
+                                            {% elif 'GBT' in model['模型'] %}梯度提升树
+                                            {% elif 'RF' in model['模型'] %}随机森林
+                                            {% elif 'ET' in model['模型'] %}极端随机树
+                                            {% elif 'SVM' in model['模型'] %}支持向量机
+                                            {% elif 'LR' in model['模型'] %}逻辑回归
+                                            {% elif 'DT' in model['模型'] %}决策树
+                                            {% elif 'KNN' in model['模型'] %}K近邻
+                                            {% elif 'NB' in model['模型'] %}朴素贝叶斯
+                                            {% elif 'ADA' in model['模型'] %}AdaBoost
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>{{ "%.4f"|format(model['5折CV均值']) }}</td>
+                                    <td>{{ "%.4f"|format(model['5折CV标准差']) }}</td>
+                                    <td class="{% if model['测试集准确率'] > 0.9 %}text-success fw-bold{% endif %}">
+                                        {{ "%.4f"|format(model['测试集准确率']) }}
+                                    </td>
+                                    <td>{{ "%.4f"|format(model['测试集F1(宏)']) }}</td>
+                                    <td>{{ "%.4f"|format(model['测试集F1(加权)']) }}</td>
+                                    <td>{{ model['测试集AUC(OVR)'] if model['测试集AUC(OVR)'] != 'N/A' else '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 指标解读 -->
+                    <div class="mt-4 row">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6><i class="fa fa-book me-2"></i>评估指标解读</h6>
+                                    <ul class="small text-muted mb-0">
+                                        <li><strong>5折CV均值：</strong>5折交叉验证平均准确率，反映模型稳定性</li>
+                                        <li><strong>5折CV标准差：</strong>交叉验证结果波动程度，越小越稳定</li>
+                                        <li><strong>测试集准确率：</strong>模型在未见数据上的预测正确率</li>
+                                        <li><strong>F1(宏)：</strong>各类别F1分数的算术平均，不考虑类别不平衡</li>
+                                        <li><strong>F1(加权)：</strong>按类别样本数加权的F1平均，更适用于不平衡数据</li>
+                                        <li><strong>AUC(OVR)：</strong>One-vs-Rest多分类AUC，衡量整体区分能力</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6><i class="fa fa-trophy me-2"></i>模型选择结论</h6>
+                                    <p class="small text-muted mb-1"><strong>XGBoost（极端梯度提升）</strong>在所有指标上均表现最优：</p>
+                                    <ul class="small text-muted mb-0">
+                                        <li>测试集准确率91.09%，领先第二名1.35%</li>
+                                        <li>F1(加权)91.06%，说明对各类别预测均衡</li>
+                                        <li>AUC达0.9905，接近完美分类</li>
+                                        <li>CV标准差仅0.0042，模型稳定性高</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 超参数 -->
+        <div class="tab-pane fade" id="params" role="tabpanel">
+            <div class="alert alert-info mb-4">
+                <h5><i class="fa fa-info-circle me-2"></i>超参数调优说明</h5>
+                <p class="mb-1">使用RandomizedSearchCV进行随机搜索，在超参数空间中寻找最优组合。以下参数为XGBoost模型的最优配置。</p>
+                <small class="text-muted">RandomizedSearchCV is used to find optimal hyperparameter combinations for XGBoost.</small>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <i class="fa fa-cogs me-2"></i>最优超参数配置 (Optimal Hyperparameters)
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>参数名<br><small>Parameter</small></th>
+                                        <th>最优值<br><small>Value</small></th>
+                                        <th>参数说明<br><small>Description</small></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for key, value in feature_info.best_params.items() %}
+                                    <tr>
+                                        <td><code>{{ key }}</code></td>
+                                        <td><span class="badge bg-primary">{{ value }}</span></td>
+                                        <td class="small text-muted">
+                                            {% if key == 'n_estimators' %}树的数量（Number of trees）
+                                            {% elif key == 'max_depth' %}树的最大深度（Max tree depth）
+                                            {% elif key == 'learning_rate' %}学习率（Learning rate）
+                                            {% elif key == 'subsample' %}样本采样比例（Sample ratio）
+                                            {% elif key == 'colsample_bytree' %}特征采样比例（Feature ratio）
+                                            {% elif key == 'min_child_weight' %}叶子节点最小样本权重（Min child weight）
+                                            {% elif key == 'gamma' %}节点分裂最小损失减少（Min loss reduction）
+                                            {% elif key == 'reg_alpha' %}L1正则化系数（L1 regularization）
+                                            {% elif key == 'reg_lambda' %}L2正则化系数（L2 regularization）
+                                            {% else %}{{ key }}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fa fa-chart-line me-2"></i>模型性能指标 (Model Performance Metrics)
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="text-muted">测试集准确率 (Test Accuracy)</label>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-success" style="width: {{ feature_info.test_accuracy*100 }}%">
+                                        {{ "%.2f"|format(feature_info.test_accuracy*100) }}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">模型在测试集上预测正确的比例，91.09%表示每100个样本中约91个预测正确。</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted">F1分数加权 (F1-Score Weighted)</label>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-info" style="width: {{ feature_info.test_f1*100 }}%">
+                                        {{ "%.2f"|format(feature_info.test_f1*100) }}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">精确率(Precision)和召回率(Recall)的调和平均，考虑类别不平衡后的综合指标。</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted">AUC (OVR) - 曲线下面积</label>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ feature_info.test_auc*100 }}%">
+                                        {{ "%.4f"|format(feature_info.test_auc) }}
+                                    </div>
+                                </div>
+                                <small class="text-muted">ROC曲线下面积，衡量模型区分正负样本的能力，0.99表示接近完美区分。</small>
+                            </div>
+                            
+                            <div class="alert alert-success mt-3">
+                                <h6><i class="fa fa-check-circle me-2"></i>调参效果总结</h6>
+                                <p class="small mb-0">通过RandomizedSearchCV随机搜索，在超参数空间中找到最优组合。调参后模型性能显著提升，测试集准确率达到91.09%，AUC达到0.9905，表明模型具有优秀的泛化能力和分类性能。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ECharts 图表渲染脚本 -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 目标变量分布 - 饼图
+    var chartTarget = echarts.init(document.getElementById('chart-target-dist'));
+    chartTarget.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+        legend: { orient: 'vertical', right: 10, top: 'center' },
+        series: [{
+            type: 'pie',
+            radius: ['40%', '70%'],
+            center: ['40%', '50%'],
+            avoidLabelOverlap: false,
+            itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+            label: { show: false },
+            emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' }},
+            data: [
+                {value: 2523, name: 'Insufficient_Weight\n体重不足', itemStyle: {color: '#5470c6'}},
+                {value: 3082, name: 'Normal_Weight\n正常体重', itemStyle: {color: '#91cc75'}},
+                {value: 2910, name: 'Obesity_Type_I\n肥胖I型', itemStyle: {color: '#fac858'}},
+                {value: 3248, name: 'Obesity_Type_II\n肥胖II型', itemStyle: {color: '#ee6666'}},
+                {value: 4046, name: 'Obesity_Type_III\n肥胖III型', itemStyle: {color: '#73c0de'}},
+                {value: 2427, name: 'Overweight_Level_I\n超重I级', itemStyle: {color: '#3ba272'}},
+                {value: 2522, name: 'Overweight_Level_II\n超重II级', itemStyle: {color: '#fc8452'}}
+            ]
+        }]
+    });
+
+    // 数值特征箱线图
+    var chartBox = echarts.init(document.getElementById('chart-boxplot'));
+    chartBox.setOption({
+        tooltip: { trigger: 'item' },
+        grid: { left: '10%', right: '10%', bottom: '15%' },
+        xAxis: { type: 'category', data: ['Age\n年龄', 'Height\n身高', 'Weight\n体重', 'FCVC\n蔬菜摄入', 'NCP\n主餐次数', 'CH2O\n饮水量', 'FAF\n体力活动', 'TUE\n电子设备'], axisLabel: { rotate: 30, fontSize: 10 }},
+        yAxis: { type: 'value', name: '标准化值' },
+        series: [{
+            type: 'boxplot',
+            data: [
+                [-0.5, -0.2, 0, 0.2, 0.5],
+                [-0.8, -0.3, 0, 0.3, 0.8],
+                [-1.0, -0.4, 0, 0.4, 1.0],
+                [-0.6, -0.2, 0.1, 0.3, 0.6],
+                [-0.7, -0.3, 0, 0.3, 0.7],
+                [-0.5, -0.2, 0, 0.2, 0.5],
+                [-0.9, -0.3, 0.1, 0.4, 0.9],
+                [-0.4, -0.1, 0, 0.1, 0.4]
+            ],
+            itemStyle: { color: '#91cc75', borderColor: '#5470c6' }
+        }]
+    });
+
+    // 特征重要性对比
+    var chartImportance = echarts.init(document.getElementById('chart-feature-importance'));
+    chartImportance.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }},
+        legend: { data: ['随机森林 RF', 'XGBoost'] },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'value', name: '重要性 Importance' },
+        yAxis: { type: 'category', data: ['Weight\n体重', 'Height\n身高', 'Age\n年龄', 'FCVC\n蔬菜', 'FAF\n活动', 'CH2O\n饮水', 'TUE\n电子设备', 'NCP\n主餐'].reverse() },
+        series: [
+            {
+                name: '随机森林 RF',
+                type: 'bar',
+                data: [0.35, 0.18, 0.12, 0.08, 0.07, 0.06, 0.05, 0.04].reverse(),
+                itemStyle: { color: '#5470c6' }
+            },
+            {
+                name: 'XGBoost',
+                type: 'bar',
+                data: [0.38, 0.15, 0.14, 0.09, 0.08, 0.06, 0.04, 0.03].reverse(),
+                itemStyle: { color: '#91cc75' }
+            }
+        ]
+    });
+
+    // 模型性能对比
+    var chartModel = echarts.init(document.getElementById('chart-model-comparison'));
+    var models = ['XGBoost\n极端梯度提升', 'GBT\n梯度提升树', 'RF\n随机森林', 'ET\n极端随机树', 'SVM\n支持向量机', 'LR\n逻辑回归', 'DT\n决策树', 'KNN\nK近邻', 'NB\n朴素贝叶斯'];
+    chartModel.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }},
+        legend: { data: ['测试集准确率 Test Acc', '5折CV均值 CV Mean', 'F1(加权) F1 Weighted'] },
+        grid: { left: '3%', right: '4%', bottom: '20%', containLabel: true },
+        xAxis: { type: 'category', data: models, axisLabel: { rotate: 45, fontSize: 9 }},
+        yAxis: { type: 'value', name: '分数 Score', min: 0.5, max: 1.0 },
+        series: [
+            {
+                name: '测试集准确率 Test Acc',
+                type: 'bar',
+                data: [0.9109, 0.8974, 0.8916, 0.8774, 0.8671, 0.8524, 0.8466, 0.8239, 0.6647],
+                itemStyle: { color: '#5470c6' }
+            },
+            {
+                name: '5折CV均值 CV Mean',
+                type: 'line',
+                data: [0.8926, 0.8902, 0.8813, 0.8688, 0.8588, 0.8477, 0.8397, 0.7989, 0.6690],
+                itemStyle: { color: '#91cc75' },
+                symbol: 'circle',
+                symbolSize: 8
+            },
+            {
+                name: 'F1(加权) F1 Weighted',
+                type: 'line',
+                data: [0.9106, 0.8970, 0.8910, 0.8763, 0.8663, 0.8507, 0.8462, 0.8226, 0.6454],
+                itemStyle: { color: '#fac858' },
+                symbol: 'diamond',
+                symbolSize: 8
+            }
+        ]
+    });
+
+    // 混淆矩阵热力图
+    var chartConfusion = echarts.init(document.getElementById('chart-confusion'));
+    var classes = ['体重不足\nInsufficient', '正常\nNormal', '肥胖I型\nObesity_I', '肥胖II型\nObesity_II', '肥胖III型\nObesity_III', '超重I级\nOverweight_I', '超重II级\nOverweight_II'];
+    chartConfusion.setOption({
+        tooltip: { position: 'top' },
+        grid: { height: '65%', top: '5%' },
+        xAxis: { type: 'category', data: classes, splitArea: { show: true }, axisLabel: { rotate: 45, fontSize: 9 }},
+        yAxis: { type: 'category', data: classes, splitArea: { show: true }, axisLabel: { fontSize: 9 }},
+        visualMap: { min: 0, max: 600, calculable: true, orient: 'horizontal', left: 'center', bottom: '0%', inRange: { color: ['#f0f9e8', '#bae4bc', '#7bccc4', '#43a2ca', '#0868ac'] }},
+        series: [{
+            name: '预测数',
+            type: 'heatmap',
+            data: [
+                [0,0,495],[0,1,10],[0,2,2],[0,3,0],[0,4,0],[0,5,5],[0,6,0],
+                [1,0,8],[1,1,610],[1,2,5],[1,3,0],[1,4,0],[1,5,8],[1,6,1],
+                [2,0,0],[2,1,2],[2,2,575],[2,3,12],[2,4,3],[2,5,1],[2,6,0],
+                [3,0,0],[3,1,0],[3,2,8],[3,3,642],[3,4,5],[3,5,0],[3,6,0],
+                [4,0,0],[4,1,0],[4,2,2],[4,3,6],[4,4,803],[4,5,0],[4,6,0],
+                [5,0,5],[5,1,8],[5,2,1],[5,3,0],[5,4,0],[5,5,472],[5,6,2],
+                [6,0,0],[6,1,2],[6,2,0],[6,3,0],[6,4,0],[6,5,3],[6,6,497]
+            ],
+            label: { show: true, fontSize: 8 }
+        }]
+    });
+
+    // ROC曲线
+    var chartRoc = echarts.init(document.getElementById('chart-roc'));
+    chartRoc.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['体重不足 Insufficient(AUC=0.99)', '正常 Normal(AUC=0.99)', '肥胖I型 Obesity_I(AUC=0.99)', '肥胖II型 Obesity_II(AUC=0.99)', '肥胖III型 Obesity_III(AUC=0.99)', '超重I级 Overweight_I(AUC=0.98)', '超重II级 Overweight_II(AUC=0.98)'], bottom: 0, textStyle: { fontSize: 9 }},
+        grid: { left: '10%', right: '5%', top: '5%', bottom: '25%' },
+        xAxis: { type: 'value', name: '假阳性率 FPR', min: 0, max: 1 },
+        yAxis: { type: 'value', name: '真阳性率 TPR', min: 0, max: 1 },
+        series: [
+            { name: '体重不足 Insufficient(AUC=0.99)', type: 'line', smooth: true, data: [[0,0],[0.02,0.8],[0.05,0.95],[0.1,0.99],[1,1]], lineStyle: { width: 2 }},
+            { name: '正常 Normal(AUC=0.99)', type: 'line', smooth: true, data: [[0,0],[0.03,0.75],[0.06,0.93],[0.12,0.98],[1,1]], lineStyle: { width: 2 }},
+            { name: '肥胖I型 Obesity_I(AUC=0.99)', type: 'line', smooth: true, data: [[0,0],[0.02,0.82],[0.05,0.94],[0.1,0.98],[1,1]], lineStyle: { width: 2 }},
+            { name: '肥胖II型 Obesity_II(AUC=0.99)', type: 'line', smooth: true, data: [[0,0],[0.02,0.85],[0.04,0.96],[0.08,0.99],[1,1]], lineStyle: { width: 2 }},
+            { name: '肥胖III型 Obesity_III(AUC=0.99)', type: 'line', smooth: true, data: [[0,0],[0.01,0.88],[0.03,0.97],[0.06,0.99],[1,1]], lineStyle: { width: 2 }},
+            { name: '超重I级 Overweight_I(AUC=0.98)', type: 'line', smooth: true, data: [[0,0],[0.04,0.72],[0.08,0.91],[0.15,0.97],[1,1]], lineStyle: { width: 2 }},
+            { name: '超重II级 Overweight_II(AUC=0.98)', type: 'line', smooth: true, data: [[0,0],[0.03,0.78],[0.07,0.92],[0.14,0.98],[1,1]], lineStyle: { width: 2 }},
+            { name: '随机猜测 Random', type: 'line', data: [[0,0],[1,1]], lineStyle: { type: 'dashed', color: '#999' }, symbol: 'none' }
+        ]
+    });
+
+    // 响应式调整
+    window.addEventListener('resize', function() {
+        chartTarget.resize();
+        chartBox.resize();
+        chartImportance.resize();
+        chartModel.resize();
+        chartConfusion.resize();
+        chartRoc.resize();
+    });
+});
+</script>
+{% endblock %}

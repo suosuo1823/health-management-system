@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}预测历史 - 健康管家{% endblock %}
+{% block topbar_title %}肥胖风险预测历史{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 style="font-weight:700;margin:0;"><i class="fa fa-area-chart me-2" style="color:var(--accent);"></i>预测历史</h4>
+  <a href="{{ url_for('predict.index') }}" class="btn btn-sm" style="background:var(--accent);border:none;color:#000;font-weight:700;">
+    <i class="fa fa-plus me-1"></i>新建预测
+  </a>
+</div>
+
+{% if records %}
+<div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>身高(cm)</th>
+            <th>体重(kg)</th>
+            <th>BMI</th>
+            <th>预测结果</th>
+            <th>置信度</th>
+            <th>风险等级</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td style="font-weight:600;color:var(--accent);">{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '-' }}</td>
+            <td>{{ r.height | round1 }}</td>
+            <td>{{ r.weight | round1 }}</td>
+            <td><span style="font-weight:700;color:var(--accent);">{{ r.bmi | round1 }}</span></td>
+            <td>
+              <span class="badge" style="background:{{ r.level_color }};color:#fff;font-size:11px;">
+                {{ r.predicted_level }}
+              </span>
+            </td>
+            <td>{{ (r.confidence * 100)|round(1) }}%</td>
+            <td>
+              {% if r.risk_level == 'high' %}
+              <span class="badge" style="background:#f8d7da;color:#721c24;font-size:11px;">高风险</span>
+              {% elif r.risk_level == 'overweight1' or r.risk_level == 'overweight2' or r.risk_level == 'overweight3' %}
+              <span class="badge" style="background:#fff3cd;color:#856404;font-size:11px;">超重</span>
+              {% elif r.risk_level == 'insufficient' %}
+              <span class="badge" style="background:#d1ecf1;color:#0c5460;font-size:11px;">偏低</span>
+              {% else %}
+              <span class="badge" style="background:#d4edda;color:#155724;font-size:11px;">正常</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center" style="font-size:13px;">
+    {% if pagination.has_prev %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('predict.history', page=pagination.prev_num) }}" style="color:var(--accent);">上一页</a></li>
+    {% endif %}
+    {% for p in pagination.iter_pages() %}
+      {% if p %}
+        <li class="page-item {{ 'active' if p==pagination.page else '' }}"><a class="page-link" href="{{ url_for('predict.history', page=p) }}" style="{{ 'background:var(--accent);border-color:var(--accent);color:#000;' if p==pagination.page else 'color:var(--accent);' }}">{{ p }}</a></li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+      {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('predict.history', page=pagination.next_num) }}" style="color:var(--accent);">下一页</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5" style="background:var(--bg);border-radius:var(--radius);">
+  <i class="fa fa-area-chart" style="font-size:48px;color:#d8edd9;margin-bottom:16px;"></i>
+  <p style="color:var(--text-muted);font-size:15px;margin:0;">暂无预测记录</p>
+  <a href="{{ url_for('predict.index') }}" class="btn btn-sm mt-3" style="background:var(--accent);border:none;color:#000;font-weight:700;">
+    去做一次预测
+  </a>
+</div>
+{% endif %}
+{% endblock %}

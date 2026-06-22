@@ -1,0 +1,592 @@
+{% extends "base.html" %}
+{% block title %}肥胖风险判定 - 健康管家{% endblock %}
+{% block topbar_title %}肥胖风险判定{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- 判定表单 -->
+  <div class="col-lg-5">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#2d8653,#52c97f);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-stethoscope" style="color:#fff;font-size:18px;"></i>
+          </div>
+          <div>
+            <h5 style="font-weight:700;margin:0;">输入健康数据</h5>
+            <p style="color:var(--text-muted);font-size:12px;margin:0;">3项算法创新驱动 · XGBoost+SHAP+Stacking</p>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('predict.index') }}" id="predict-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="row g-3">
+            <!-- 基本信息 -->
+            <div class="col-12">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:8px;">基本信息</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">性别 <span style="color:#dc3545;">*</span></label>
+              <select name="gender" class="form-select" required>
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.gender==0 else '' }}>女</option>
+                <option value="1" {{ 'selected' if prefilled.gender==1 else '' }}>男</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">年龄 <span style="color:#dc3545;">*</span></label>
+              <input type="number" name="age" class="form-control" min="1" max="120" placeholder="25" required value="{{ prefilled.age or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">身高 (cm) <span style="color:#dc3545;">*</span></label>
+              <input type="number" name="height" class="form-control" min="100" max="220" step="0.1" placeholder="170" required value="{{ prefilled.height or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">体重 (kg) <span style="color:#dc3545;">*</span></label>
+              <input type="number" name="weight" class="form-control" min="20" max="300" step="0.1" placeholder="65" required value="{{ prefilled.weight or '' }}">
+            </div>
+
+            <!-- 家族史 -->
+            <div class="col-12">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin:8px 0 8px;">家族肥胖史</div>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="family_history" id="fh-yes" value="1" {{ 'checked' if prefilled.family_history else '' }}>
+                <label class="form-check-label" for="fh-yes" style="font-size:13px;">有家族肥胖史</label>
+              </div>
+              <div class="form-text" style="font-size:11px;">家族中是否有直系亲属存在超重/肥胖问题</div>
+            </div>
+
+            <!-- 饮食习惯 -->
+            <div class="col-12">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin:8px 0 8px;">饮食习惯</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">高热量食物频率</label>
+              <select name="high_calorie_food" class="form-select">
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.high_calorie_food==0 else '' }}>从不</option>
+                <option value="1" {{ 'selected' if prefilled.high_calorie_food==1 else '' }}>偶尔</option>
+                <option value="2" {{ 'selected' if prefilled.high_calorie_food==2 else '' }}>经常</option>
+                <option value="3" {{ 'selected' if prefilled.high_calorie_food==3 else '' }}>总是</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">蔬菜摄入频率</label>
+              <select name="vegetable_frequency" class="form-select">
+                <option value="">请选择</option>
+                <option value="0">很少</option>
+                <option value="1">偶尔</option>
+                <option value="2" {{ 'selected' if prefilled.vegetable_frequency==2 else '' }}>经常</option>
+                <option value="3">每天</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">主餐次数</label>
+              <select name="main_meals" class="form-select">
+                <option value="">请选择</option>
+                <option value="0">0-1餐</option>
+                <option value="1">2餐</option>
+                <option value="2" {{ 'selected' if prefilled.main_meals==2 else '' }}>3餐</option>
+                <option value="3">4餐以上</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">餐后零食习惯</label>
+              <select name="snacking" class="form-select">
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.snacking==0 else '' }}>从不</option>
+                <option value="1" {{ 'selected' if prefilled.snacking==1 else '' }}>偶尔</option>
+                <option value="2" {{ 'selected' if prefilled.snacking==2 else '' }}>经常</option>
+                <option value="3" {{ 'selected' if prefilled.snacking==3 else '' }}>总是</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">水摄入量 (杯/天)</label>
+              <select name="water_consumption" class="form-select">
+                <option value="">请选择</option>
+                <option value="0">少于1杯</option>
+                <option value="1">1-2杯</option>
+                <option value="2" {{ 'selected' if prefilled.water_consumption==2 else '' }}>2-3杯</option>
+                <option value="3" {{ 'selected' if prefilled.water_consumption==3 else '' }}>3杯以上</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">每日监控卡路里</label>
+              <select name="calorie_monitoring" class="form-select">
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.calorie_monitoring==0 else '' }}>否</option>
+                <option value="1" {{ 'selected' if prefilled.calorie_monitoring==1 else '' }}>是</option>
+              </select>
+            </div>
+
+            <!-- 运动因素 -->
+            <div class="col-12">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin:8px 0 8px;">运动与行为</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">身体活动水平</label>
+              <select name="physical_activity" class="form-select">
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.physical_activity==0 else '' }}>从不</option>
+                <option value="1" {{ 'selected' if prefilled.physical_activity==1 else '' }}>偶尔</option>
+                <option value="2" {{ 'selected' if prefilled.physical_activity==2 else '' }}>经常</option>
+                <option value="3" {{ 'selected' if prefilled.physical_activity==3 else '' }}>每天</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">使用电子设备时长</label>
+              <select name="screen_time" class="form-select">
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.screen_time==0 else '' }}>几乎不</option>
+                <option value="1" {{ 'selected' if prefilled.screen_time==1 else '' }}>1-2小时</option>
+                <option value="2" {{ 'selected' if prefilled.screen_time==2 else '' }}>3-4小时</option>
+                <option value="3" {{ 'selected' if prefilled.screen_time==3 else '' }}>4小时以上</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">饮酒频率</label>
+              <select name="alcohol" class="form-select">
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.alcohol==0 else '' }}>从不</option>
+                <option value="1" {{ 'selected' if prefilled.alcohol==1 else '' }}>偶尔</option>
+                <option value="2" {{ 'selected' if prefilled.alcohol==2 else '' }}>经常</option>
+                <option value="3" {{ 'selected' if prefilled.alcohol==3 else '' }}>每天</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">主要交通方式</label>
+              <select name="transportation" class="form-select">
+                <option value="">请选择</option>
+                <option value="0" {{ 'selected' if prefilled.transportation==0 else '' }}>步行</option>
+                <option value="1" {{ 'selected' if prefilled.transportation==1 else '' }}>自行车</option>
+                <option value="2" {{ 'selected' if prefilled.transportation==2 else '' }}>公共交通</option>
+                <option value="3" {{ 'selected' if prefilled.transportation==3 else '' }}>私家车/打车</option>
+                <option value="4" {{ 'selected' if prefilled.transportation==4 else '' }}>电动车/摩托车</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success w-100 mt-4" style="background:linear-gradient(135deg,#2d8653,#52c97f);border:none;font-weight:700;font-size:15px;padding:12px;">
+            <i class="fa fa-stethoscope me-2"></i>开始风险判定
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 判定结果 -->
+  <div class="col-lg-7">
+    {% if result %}
+    <!-- 结果卡片 -->
+    <div class="result-card mb-4" id="result-section">
+      <div class="result-header">
+        <i class="fa fa-clipboard"></i>
+        <span>判定结果</span>
+      </div>
+      <div class="result-body">
+        <div class="result-main">
+          <div class="result-level-badge level-{{ result.level_code }}">
+            {{ result.level }}
+          </div>
+          <div class="result-desc">{{ result.description }}</div>
+        </div>
+        <div class="result-prob-grid">
+          {% for label, prob in result.probabilities %}
+          <div class="prob-item {{ 'prob-active' if label == result.level else '' }}">
+            <div class="prob-label">{{ label }}</div>
+            <div class="prob-bar-bg">
+              <div class="prob-bar-fill" style="width:{{ (prob * 100) | int }}%;"></div>
+            </div>
+            <div class="prob-value">{{ (prob * 100) | int }}%</div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="result-advice">
+          <div style="font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+            <i class="fa fa-lightbulb-o me-1"></i>健康建议
+          </div>
+          <p style="margin:0 0 14px;font-size:14px;line-height:1.8;color:#1c3028;background:#f0faf3;padding:10px 14px;border-radius:8px;border-left:3px solid var(--primary);">
+            {{ result.advice }}
+          </p>
+
+          {# ── 个性化量化建议列表 ── #}
+          {% if result.suggestions %}
+          <div style="margin-top:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+              <i class="fa fa-list-check me-1"></i>针对性改善方案（按优先级排序）
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
+              {% for s in result.suggestions %}
+              <div{% if loop.last and result.suggestions|length is odd %} style="grid-column:1/-1"{% endif %}>
+                <div class="d-flex align-items-start gap-2 p-3"
+                     style="background:#fff;border-radius:10px;border:1px solid #e8f5ec;box-shadow:0 1px 4px rgba(0,0,0,.04);height:100%;">
+                  {# 图标 #}
+                  <div style="width:36px;height:36px;border-radius:8px;background:{{ s.color }}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fa {{ s.icon }}" style="color:{{ s.color }};font-size:16px;"></i>
+                  </div>
+                  <div style="min-width:0;flex:1;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                      <span style="font-weight:700;font-size:13px;color:#1c3028;">{{ s.label }}</span>
+                      {# 影响度徽章 #}
+                      {% if s.impact >= 7 %}
+                        <span class="badge" style="background:#dc3545;font-size:10px;padding:2px 6px;">高优先级</span>
+                      {% elif s.impact >= 4 %}
+                        <span class="badge" style="background:#f0a500;font-size:10px;padding:2px 6px;">中优先级</span>
+                      {% elif s.impact > 0 %}
+                        <span class="badge" style="background:#6c757d;font-size:10px;padding:2px 6px;">建议</span>
+                      {% endif %}
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1" style="font-size:11px;">
+                      <span style="color:#dc3545;"><i class="fa fa-arrow-right me-1"></i>当前：{{ s.current }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1" style="font-size:11px;">
+                      <span style="color:#28a745;"><i class="fa fa-flag-checkered me-1"></i>目标：{{ s.target }}</span>
+                    </div>
+                    <p style="margin:0;font-size:11px;color:#6b8a77;line-height:1.5;">{{ s.description }}</p>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {# ━━━━━━━━━━━ 算法创新核心展示区 ━━━━━━━━━━━ #}
+        {% if result.innovation_hybrid.get('enabled') or result.innovation_shap.get('enabled') or result.innovation_stacking.get('enabled') %}
+        <div style="margin-top:20px;border-top:2px solid #2d8653;padding-top:0;">
+          {# ── 创新横幅 ── #}
+          <div style="background:linear-gradient(135deg,#1a5632 0%,#2d8653 40%,#3da06a 100%);border-radius:12px 12px 0 0;padding:16px 20px;display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="fa fa-flask" style="color:#fff;font-size:20px;"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="color:#fff;font-size:16px;font-weight:800;letter-spacing:0.5px;">算法创新增强预测</div>
+              <div style="color:rgba(255,255,255,0.8);font-size:12px;margin-top:2px;">3项原创算法协同工作，从"知道你胖"升级到"告诉你为什么胖"</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              {% if result.innovation_hybrid.get('enabled') %}<span style="background:rgba(255,255,255,0.2);color:#fff;font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;">混合模型</span>{% endif %}
+              {% if result.innovation_shap.get('enabled') %}<span style="background:rgba(255,255,255,0.2);color:#fff;font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;">SHAP归因</span>{% endif %}
+              {% if result.innovation_stacking.get('enabled') %}<span style="background:rgba(255,255,255,0.2);color:#fff;font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;">Stacking</span>{% endif %}
+            </div>
+          </div>
+
+          <div style="background:#f0faf3;border-radius:0 0 12px 12px;padding:20px;border:1px solid #c8e6d4;border-top:none;">
+
+            {# ── 创新点1：NHC指南混合预测模型 ── #}
+            {% if result.innovation_hybrid.get('enabled') %}
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid #d4e8dc;box-shadow:0 2px 8px rgba(45,134,83,0.08);">
+              <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
+                <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#2d8653,#52c97f);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="fa fa-code-branch" style="color:#fff;font-size:18px;"></i>
+                </div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="font-size:15px;font-weight:800;color:#1a5632;">NHC指南约束的混合预测模型</span>
+                    <span style="background:#2d8653;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;">ML+规则融合</span>
+                  </div>
+                  <div style="font-size:12px;color:#5a8a6c;line-height:1.7;">
+                    传统纯ML模型在BMI分类边界（如24.0/28.0附近）容易误判。本创新将XGBoost的统计预测与国家卫健委《成人肥胖食养指南》(WS/T 428-2013)的BMI分类规则进行<strong>加权融合</strong>，在边界区域自动提升医学规则权重，实现更鲁棒的风险判定。
+                  </div>
+                </div>
+              </div>
+
+              {# 权重可视化条 #}
+              {% set alpha = result.innovation_hybrid.get('alpha', 0.7) %}
+              {% set ml_pct = (alpha * 100) | int %}
+              {% set rule_pct = 100 - ml_pct %}
+              <div style="background:#f0faf3;border-radius:10px;padding:14px 16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <span style="font-size:12px;font-weight:700;color:#2d8653;">融合权重分配</span>
+                  <span style="font-size:11px;color:#6b8a77;">本次预测 α={{ "%.1f"|format(alpha) }}</span>
+                </div>
+                <div style="display:flex;height:28px;border-radius:8px;overflow:hidden;margin-bottom:10px;">
+                  <div style="width:{{ ml_pct }}%;background:linear-gradient(90deg,#2d8653,#3da06a);display:flex;align-items:center;justify-content:center;transition:width 0.6s ease;">
+                    <span style="color:#fff;font-size:11px;font-weight:700;">ML模型 {{ ml_pct }}%</span>
+                  </div>
+                  <div style="width:{{ rule_pct }}%;background:linear-gradient(90deg,#f0a500,#ffc107);display:flex;align-items:center;justify-content:center;transition:width 0.6s ease;">
+                    <span style="color:#fff;font-size:11px;font-weight:700;">NHC规则 {{ rule_pct }}%</span>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #d4e8dc;">
+                    <div style="font-size:10px;color:#6b8a77;margin-bottom:4px;"><i class="fa fa-bar-chart me-1"></i>XGBoost统计预测</div>
+                    <div style="font-size:11px;color:#2d8653;font-weight:600;">从20,758样本中学到的数据规律</div>
+                  </div>
+                  <div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #d4e8dc;">
+                    <div style="font-size:10px;color:#6b8a77;margin-bottom:4px;"><i class="fa fa-stethoscope me-1"></i>NHC医学规则</div>
+                    <div style="font-size:11px;color:#b8860b;font-weight:600;">WS/T 428-2013 BMI分类标准</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {# ── 创新点2：SHAP个体化特征归因 ── #}
+            {% if result.innovation_shap.get('enabled') and result.shap_summary %}
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid #f0d97a;box-shadow:0 2px 8px rgba(184,134,11,0.08);">
+              <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
+                <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#b8860b,#ffc107);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="fa fa-search" style="color:#fff;font-size:18px;"></i>
+                </div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="font-size:15px;font-weight:800;color:#7a5c00;">基于SHAP的个体化风险归因</span>
+                    <span style="background:#b8860b;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;">可解释AI</span>
+                  </div>
+                  <div style="font-size:12px;color:#8b6914;line-height:1.7;">
+                    传统模型只能给出"你属于肥胖II型"，无法解释<strong>为什么</strong>。本创新使用SHAP（SHapley Additive exPlanations）对每次预测进行特征归因分析，识别出<strong>您个人</strong>的Top风险因素及其贡献方向，实现从"黑箱预测"到"透明解释"的升级。
+                  </div>
+                </div>
+              </div>
+
+              {# SHAP横向柱状图 #}
+              {% set shap_factors = result.innovation_shap.get('top_factors', [])[:5] %}
+              {% if shap_factors %}
+              {% set max_abs = shap_factors | map(attribute='abs_contribution') | max %}
+              <div style="background:#fffdf5;border-radius:10px;padding:14px 16px;">
+                <div style="font-size:12px;font-weight:700;color:#b8860b;margin-bottom:12px;">
+                  <i class="fa fa-bar-chart me-1"></i>您的个性化风险因素贡献图
+                </div>
+                {% for f in shap_factors %}
+                {% set bar_pct = (f.abs_contribution / max_abs * 80) | int if max_abs > 0 else 0 %}
+                <div style="margin-bottom:10px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:12px;font-weight:600;color:#4a3728;">{{ f.feature_cn }}</span>
+                    <span style="font-size:11px;font-weight:700;{% if f.shap_value > 0 %}color:#c0392b;{% else %}color:#27ae60;{% endif %}">
+                      {% if f.shap_value > 0 %}+{{ f.shap_value | round(3) }} 增加风险{% else %}{{ f.shap_value | round(3) }} 降低风险{% endif %}
+                    </span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    {% if f.shap_value > 0 %}
+                    <div style="flex:1;height:16px;background:#fef0e0;border-radius:4px;overflow:hidden;position:relative;">
+                      <div style="height:100%;width:{{ bar_pct + 10 }}%;background:linear-gradient(90deg,#f0a500,#dc3545);border-radius:4px;transition:width 0.8s ease;"></div>
+                    </div>
+                    <i class="fa fa-arrow-up" style="color:#dc3545;font-size:12px;"></i>
+                    {% else %}
+                    <div style="flex:1;height:16px;background:#e8f5ec;border-radius:4px;overflow:hidden;position:relative;">
+                      <div style="height:100%;width:{{ bar_pct + 10 }}%;background:linear-gradient(90deg,#52c97f,#2d8653);border-radius:4px;transition:width 0.8s ease;"></div>
+                    </div>
+                    <i class="fa fa-arrow-down" style="color:#27ae60;font-size:12px;"></i>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+                <div style="margin-top:12px;padding:10px;background:#fff;border-radius:8px;border:1px solid #f0d97a;">
+                  <div style="font-size:11px;color:#8b6914;line-height:1.6;">
+                    <i class="fa fa-info-circle me-1" style="color:#b8860b;"></i>
+                    <strong>解读：</strong>
+                    {% set increase_factors = shap_factors | selectattr('shap_value', '>', 0) | list %}
+                    {% set decrease_factors = shap_factors | selectattr('shap_value', '<=', 0) | list %}
+                    {% if increase_factors %}
+                    <span style="color:#c0392b;">{{ increase_factors | map(attribute='feature_cn') | join('、') }}</span>是增加您肥胖风险的主要因素；
+                    {% endif %}
+                    {% if decrease_factors %}
+                    <span style="color:#27ae60;">{{ decrease_factors | map(attribute='feature_cn') | join('、') }}</span>对降低风险有正向贡献。
+                    {% endif %}
+                    针对红色因素进行改善，效果最显著。
+                  </div>
+                  <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #f0d97a;font-size:10px;color:#a08840;line-height:1.5;">
+                    <i class="fa fa-lightbulb-o me-1" style="color:#b8860b;"></i>
+                    <strong>说明：</strong>SHAP值反映特征间的交互效应。身高与体重高度相关时，模型会将部分贡献分摊至身高，这不代表"越高越胖"，而是相关特征的贡献分担现象。
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            {# ── 创新点3：交互特征工程+Stacking集成 ── #}
+            {% if result.innovation_stacking.get('enabled') %}
+            <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #a8c7e8;box-shadow:0 2px 8px rgba(26,82,118,0.08);">
+              <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
+                <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#1a5276,#3498db);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="fa fa-cubes" style="color:#fff;font-size:18px;"></i>
+                </div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="font-size:15px;font-weight:800;color:#1a3c5e;">交互特征工程 + Stacking集成</span>
+                    <span style="background:#1a5276;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;">多模型融合</span>
+                  </div>
+                  <div style="font-size:12px;color:#2c5f8a;line-height:1.7;">
+                    单一模型容易过拟合或遗漏特征间非线性关系。本创新从两个维度增强预测：（1）构建5个交互特征（如BMI=体重/身高²、年龄x运动频率等），挖掘特征间的协同效应；（2）采用Stacking集成策略，让XGBoost、随机森林、SVM三个基学习器的预测通过逻辑回归元学习器融合，取长补短，提升泛化能力。
+                  </div>
+                </div>
+              </div>
+
+              {# 交互特征展示 #}
+              <div style="background:#f0f5fc;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+                <div style="font-size:12px;font-weight:700;color:#1a5276;margin-bottom:10px;">
+                  <i class="fa fa-puzzle-piece me-1"></i>构建的交互特征
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">
+                  {% set interaction_features = [
+                    ('BMI', '体重/身高^2', '#2d8653'),
+                    ('年龄x运动', 'Age x FAF', '#3498db'),
+                    ('体重x高热量', 'Weight x FAVC', '#dc3545'),
+                    ('运动x屏幕', 'FAF x TUE', '#f0a500'),
+                    ('蔬菜x饮水', 'FCVC x CH2O', '#27ae60'),
+                  ] %}
+                  {% for fname, fformula, fcolor in interaction_features %}
+                  <div style="background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #d4e4f7;text-align:center;">
+                    <div style="font-size:11px;font-weight:700;color:{{ fcolor }};">{{ fname }}</div>
+                    <div style="font-size:9px;color:#6b8a77;margin-top:2px;">{{ fformula }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              {# Stacking模型投票图 #}
+              <div style="background:#f0f5fc;border-radius:10px;padding:14px 16px;">
+                <div style="font-size:12px;font-weight:700;color:#1a5276;margin-bottom:10px;">
+                  <i class="fa fa-check-square-o me-1"></i>多模型集成投票
+                </div>
+                {% set stack_label_cn = result.innovation_stacking.get('label_cn', '-') %}
+                {% set main_label_cn = result.description %}
+                {% set models_agree = stack_label_cn == main_label_cn %}
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                  {# XGBoost #}
+                  <div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #d4e4f7;display:flex;align-items:center;gap:8px;">
+                    <div style="width:30px;height:30px;border-radius:6px;background:#2d8653;display:flex;align-items:center;justify-content:center;">
+                      <i class="fa fa-tree" style="color:#fff;font-size:12px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-size:11px;font-weight:700;color:#1a3c5e;">XGBoost</div>
+                      <div style="font-size:10px;color:#6b8a77;">主模型 · 准确率91.1%</div>
+                    </div>
+                    <i class="fa fa-check-circle" style="color:#2d8653;font-size:16px;margin-left:auto;"></i>
+                  </div>
+                  {# Random Forest #}
+                  <div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #d4e4f7;display:flex;align-items:center;gap:8px;">
+                    <div style="width:30px;height:30px;border-radius:6px;background:#3498db;display:flex;align-items:center;justify-content:center;">
+                      <i class="fa fa-sitemap" style="color:#fff;font-size:12px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-size:11px;font-weight:700;color:#1a3c5e;">随机森林</div>
+                      <div style="font-size:10px;color:#6b8a77;">基学习器 #1</div>
+                    </div>
+                    <i class="fa fa-check-circle" style="color:#3498db;font-size:16px;margin-left:auto;"></i>
+                  </div>
+                  {# SVM #}
+                  <div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #d4e4f7;display:flex;align-items:center;gap:8px;">
+                    <div style="width:30px;height:30px;border-radius:6px;background:#e67e22;display:flex;align-items:center;justify-content:center;">
+                      <i class="fa fa-arrows-alt" style="color:#fff;font-size:12px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-size:11px;font-weight:700;color:#1a3c5e;">SVM</div>
+                      <div style="font-size:10px;color:#6b8a77;">基学习器 #2</div>
+                    </div>
+                    <i class="fa fa-check-circle" style="color:#e67e22;font-size:16px;margin-left:auto;"></i>
+                  </div>
+                  {# LR元学习器 #}
+                  <div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #d4e4f7;display:flex;align-items:center;gap:8px;">
+                    <div style="width:30px;height:30px;border-radius:6px;background:#9b59b6;display:flex;align-items:center;justify-content:center;">
+                      <i class="fa fa-object-group" style="color:#fff;font-size:12px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-size:11px;font-weight:700;color:#1a3c5e;">LR元学习器</div>
+                      <div style="font-size:10px;color:#6b8a77;">融合层 · 最终决策</div>
+                    </div>
+                    <i class="fa fa-star" style="color:#9b59b6;font-size:16px;margin-left:auto;"></i>
+                  </div>
+                </div>
+
+                {# 集成结果 #}
+                {% set stack_bmi_check = result.innovation_stacking %}
+                <div style="background:linear-gradient(135deg,#1a5276,#2c5f8a);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+                  <i class="fa fa-trophy" style="color:#ffc107;font-size:18px;"></i>
+                  <div style="flex:1;">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.7);">Stacking集成判定</div>
+                    <div style="font-size:14px;color:#fff;font-weight:800;">{{ stack_label_cn }}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    {% if models_agree %}
+                    <span style="background:#27ae60;color:#fff;font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;">
+                      <i class="fa fa-check me-1"></i>与主模型一致
+                    </span>
+                    {% else %}
+                    <span style="background:#f0a500;color:#fff;font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;">
+                      <i class="fa fa-exchange me-1"></i>多模型修正
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                {# BMI一致性警告：当Stacking结果与BMI明显矛盾时显示 #}
+                {% if stack_bmi_check.get('warning') %}
+                <div style="margin-top:10px;padding:10px 12px;background:#fff3e0;border-radius:8px;border:1px solid #ffcc80;display:flex;align-items:flex-start;gap:8px;">
+                  <i class="fa fa-exclamation-triangle" style="color:#e65100;font-size:14px;flex-shrink:0;margin-top:1px;"></i>
+                  <div style="font-size:11px;color:#bf360c;line-height:1.55;flex:1;">
+                    <strong>参考提示：</strong>该预测（<strong>{{ stack_bmi_check.predicted_label_cn }}</strong>）与您的BMI参考值（<strong>BMI={{ stack_bmi_check.bmi }}，{{ stack_bmi_check.bmi_label_cn }}</strong>）存在偏差。
+                    Stacking模型基于交互特征训练，对部分样本可能存在误判，最终结论以主模型+混合模型判定为准。
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="result-meta">
+          <span><i class="fa fa-calendar me-1"></i>{{ result.predict_date }}</span>
+          <span><i class="fa fa-heartbeat me-1"></i>BMI: {{ result.bmi | round1 }}</span>
+          <span><i class="fa fa-percent me-1"></i>置信度: {{ (result.confidence * 100) | int }}%</span>
+          <span><i class="fa fa-gear me-1"></i>3项创新算法</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 历史判定 -->
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div style="font-weight:700;"><i class="fa fa-history me-2" style="color:var(--primary);"></i>判定历史</div>
+          <a href="{{ url_for('predict.history') }}" class="btn btn-sm btn-outline-success" style="border-color:var(--primary);color:var(--primary);">全部</a>
+        </div>
+
+        {% if history %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" style="font-size:13px;">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>性别</th>
+                <th>年龄</th>
+                <th>BMI</th>
+                <th>判定结果</th>
+                <th>置信度</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in history %}
+              <tr>
+                <td style="font-size:12px;color:var(--text-muted);">{{ h.created_at.strftime('%m-%d %H:%M') }}</td>
+                <td>{{ '男' if h.gender else '女' }}</td>
+                <td>{{ h.age }}</td>
+                <td>{{ h.bmi | round1 }}</td>
+                <td>
+                  <span class="badge" style="background:{{ h.level_color }};color:#fff;font-size:11px;">{{ h.predicted_level }}</span>
+                </td>
+                <td style="color:var(--text-muted);">{{ (h.confidence * 100) | int }}%</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4" style="color:var(--text-muted);font-size:13px;">
+          <i class="fa fa-clipboard-list" style="font-size:28px;opacity:.3;display:block;margin-bottom:8px;"></i>
+          暂无判定记录
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

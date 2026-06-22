@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>请求过于频繁 - 健康管家</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        }
+        .card {
+            text-align: center;
+            padding: 48px 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(45, 134, 83, 0.15);
+            max-width: 440px;
+        }
+        .icon {
+            font-size: 72px;
+            margin-bottom: 24px;
+        }
+        h1 { color: #2d8653; font-size: 2rem; margin-bottom: 16px; }
+        p  { color: #555; font-size: 1rem; line-height: 1.7; margin-bottom: 32px; }
+        a {
+            display: inline-block;
+            padding: 12px 32px;
+            background: #2d8653;
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        a:hover { background: #236b42; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">&#9203;</div>
+        <h1>请求过于频繁</h1>
+        <p>您的操作频率过高，请稍等片刻后再试。<br>如有紧急需要，请联系管理员。</p>
+        <a href="{{ url_for('main.index') }}">返回首页</a>
+    </div>
+</body>
+</html>

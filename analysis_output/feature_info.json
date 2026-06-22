@@ -1,0 +1,70 @@
+{
+  "all_features": [
+    "Gender",
+    "Age",
+    "Height",
+    "Weight",
+    "family_history_with_overweight",
+    "FAVC",
+    "FCVC",
+    "NCP",
+    "CAEC",
+    "SMOKE",
+    "CH2O",
+    "SCC",
+    "FAF",
+    "TUE",
+    "CALC"
+  ],
+  "selected_features": [
+    "Gender",
+    "Age",
+    "Height",
+    "Weight",
+    "family_history_with_overweight",
+    "FAVC",
+    "FCVC",
+    "NCP",
+    "CAEC",
+    "SMOKE",
+    "CH2O",
+    "SCC",
+    "FAF",
+    "TUE",
+    "CALC"
+  ],
+  "continuous_cols": [
+    "Age",
+    "Height",
+    "Weight",
+    "FCVC",
+    "NCP",
+    "CH2O",
+    "FAF",
+    "TUE"
+  ],
+  "best_model": "XGBoost (XGB)",
+  "best_params": {
+    "subsample": 0.7,
+    "reg_lambda": 10,
+    "reg_alpha": 0.01,
+    "n_estimators": 100,
+    "min_child_weight": 1,
+    "max_depth": 6,
+    "learning_rate": 0.2,
+    "gamma": 0.1,
+    "colsample_bytree": 0.7
+  },
+  "test_accuracy": 0.9108863198458574,
+  "test_f1": 0.9106238004972125,
+  "test_auc": 0.9904682420506938,
+  "class_names": [
+    "Insufficient_Weight",
+    "Normal_Weight",
+    "Obesity_Type_I",
+    "Obesity_Type_II",
+    "Obesity_Type_III",
+    "Overweight_Level_I",
+    "Overweight_Level_II"
+  ]
+}

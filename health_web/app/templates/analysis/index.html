@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}数据分析 - 健康管家{% endblock %}
+{% block topbar_title %}数据分析{% endblock %}
+
+{% block content %}
+<!-- 导出按钮 -->
+<div class="d-flex justify-content-end gap-2 mb-3">
+  {% if current_user.is_authenticated %}
+  <a href="{{ url_for('analysis.export_diet') }}" class="btn btn-sm btn-outline-primary">
+    <i class="fa fa-download me-1"></i>导出饮食记录
+  </a>
+  <a href="{{ url_for('analysis.export_exercise') }}" class="btn btn-sm btn-outline-primary">
+    <i class="fa fa-download me-1"></i>导出运动记录
+  </a>
+  {% endif %}
+</div>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(45,134,83,.1);color:var(--primary);"><i class="fa fa-cutlery"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.diet_records | default(0) }}</div>
+        <div class="stat-label">饮食记录数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(82,201,127,.1);color:var(--accent);"><i class="fa fa-bicycle"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.exercise_records | default(0) }}</div>
+        <div class="stat-label">运动记录数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(26,115,232,.1);color:#1a73e8;"><i class="fa fa-fire"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.avg_daily_cal | round1 }}</div>
+        <div class="stat-label">日均摄入 (kcal)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(240,165,0,.1);color:#f0a500;"><i class="fa fa-bolt"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.avg_daily_burned | round1 }}</div>
+        <div class="stat-label">日均消耗 (kcal)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- 热量趋势图 -->
+  <div class="col-lg-8">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(45,134,83,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-line-chart" style="color:var(--primary);font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">热量趋势（近30天）</h5>
+        </div>
+        <div id="calorie-trend-chart" style="height:300px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 营养素占比 -->
+  <div class="col-lg-4">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);height:100%;">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(26,115,232,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-pie-chart" style="color:#1a73e8;font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">营养素构成</h5>
+        </div>
+        <div id="nutrition-pie-chart" style="height:260px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 运动类型分布 -->
+  <div class="col-lg-6">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(82,201,127,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-bar-chart" style="color:var(--accent);font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">运动类型分布</h5>
+        </div>
+        <div id="exercise-bar-chart" style="height:280px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 热量收支对比 -->
+  <div class="col-lg-6">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(240,165,0,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-balance-scale" style="color:#f0a500;font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">热量收支对比</h5>
+        </div>
+        <div id="calorie-compare-chart" style="height:280px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 餐次热量分布 -->
+  <div class="col-lg-6">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(123,47,247,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-clock-o" style="color:#7b2ff7;font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">各餐次热量分布</h5>
+        </div>
+        <div id="meal-distribution-chart" style="height:260px;"></div>
+      </div>
+    </div>
+
+    <!-- 热量平衡仪表 -->
+    <div class="card mt-4" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(220,53,69,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-dashboard" style="color:#dc3545;font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">热量平衡状态</h5>
+        </div>
+        <div id="balance-gauge-chart" style="height:200px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 运动强度与时长趋势 -->
+  <div class="col-lg-6">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(82,201,127,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-area-chart" style="color:var(--accent);font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">运动时长趋势</h5>
+        </div>
+        <div id="exercise-trend-chart" style="height:260px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var theme = HP.chartTheme;
+
+  // 1. 热量趋势
+  var calTrend = echarts.init(document.getElementById('calorie-trend-chart'));
+  calTrend.setOption({
+    ...theme,
+    tooltip: { ...theme.tooltip, trigger: 'axis' },
+    legend: { ...theme.legend, top: 0 },
+    grid: { ...theme.grid, left: 55 },
+    xAxis: {
+      type: 'category',
+      data: {{ trend_dates | tojson }},
+      axisLabel: { color: '#6b8a77', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#d8edd9' } },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'kcal',
+      axisLabel: { color: '#6b8a77', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#edf7f0', type: 'dashed' } },
+    },
+    series: [
+      {
+        name: '摄入热量',
+        type: 'line',
+        smooth: true,
+        data: {{ intake_values | tojson }},
+        itemStyle: { color: '#2d8653', borderRadius: [4, 4, 0, 0] },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(45,134,83,0.3)' }, { offset: 1, color: 'rgba(45,134,83,0)' }] } },
+        lineStyle: { width: 2 },
+      },
+      {
+        name: '消耗热量',
+        type: 'line',
+        smooth: true,
+        data: {{ burned_values | tojson }},
+        itemStyle: { color: '#52c97f', borderRadius: [4, 4, 0, 0] },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(82,201,127,0.2)' }, { offset: 1, color: 'rgba(82,201,127,0)' }] } },
+        lineStyle: { width: 2 },
+      },
+    ],
+  });
+
+  // 2. 营养素饼图
+  var nutPie = echarts.init(document.getElementById('nutrition-pie-chart'));
+  nutPie.setOption({
+    tooltip: { ...theme.tooltip, trigger: 'item', formatter: '{b}: {c}g ({d}%)' },
+    legend: { ...theme.legend, bottom: 0, orient: 'horizontal' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['50%', '45%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+      data: [
+        { value: {{ total_protein | round1 }}, name: '蛋白质', itemStyle: { color: '#1a73e8' } },
+        { value: {{ total_carb | round1 }}, name: '碳水化合物', itemStyle: { color: '#f0a500' } },
+        { value: {{ total_fat | round1 }}, name: '脂肪', itemStyle: { color: '#7b2ff7' } },
+      ],
+    }],
+  });
+
+  // 3. 运动类型柱状图
+  var exBar = echarts.init(document.getElementById('exercise-bar-chart'));
+  exBar.setOption({
+    ...theme,
+    tooltip: { ...theme.tooltip, trigger: 'axis' },
+    grid: { ...theme.grid, left: 90 },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: '#6b8a77', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#edf7f0', type: 'dashed' } },
+    },
+    yAxis: {
+      type: 'category',
+      data: {{ exercise_types | tojson }},
+      axisLabel: { color: '#6b8a77', fontSize: 12 },
+      axisLine: { lineStyle: { color: '#d8edd9' } },
+    },
+    series: [{
+      type: 'bar',
+      data: {{ exercise_counts | tojson }},
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#2d8653' },
+          { offset: 1, color: '#52c97f' },
+        ]),
+        borderRadius: [0, 8, 8, 0],
+      },
+      barWidth: 20,
+    }],
+  });
+
+  // 4. 热量收支对比
+  var calComp = echarts.init(document.getElementById('calorie-compare-chart'));
+  calComp.setOption({
+    ...theme,
+    tooltip: { ...theme.tooltip, trigger: 'axis' },
+    grid: { ...theme.grid, left: 60 },
+    xAxis: {
+      type: 'category',
+      data: {{ compare_dates | tojson }},
+      axisLabel: { color: '#6b8a77', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#d8edd9' } },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'kcal',
+      axisLabel: { color: '#6b8a77', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#edf7f0', type: 'dashed' } },
+    },
+    series: [
+      {
+        name: '摄入',
+        type: 'bar',
+        data: {{ compare_intake | tojson }},
+        itemStyle: { color: '#2d8653', borderRadius: [6, 6, 0, 0] },
+        barWidth: '35%',
+      },
+      {
+        name: '消耗',
+        type: 'bar',
+        data: {{ compare_burned | tojson }},
+        itemStyle: { color: '#52c97f', borderRadius: [6, 6, 0, 0] },
+        barWidth: '35%',
+      },
+    ],
+  });
+
+  // 5. 餐次分布
+  var mealPie = echarts.init(document.getElementById('meal-distribution-chart'));
+  mealPie.setOption({
+    tooltip: { ...theme.tooltip, trigger: 'item', formatter: '{b}: {c} kcal ({d}%)' },
+    legend: { ...theme.legend, bottom: 0, orient: 'horizontal' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '68%'],
+      center: ['50%', '45%'],
+      itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+      data: [
+        { value: {{ meal_breakfast | round1 }}, name: '早餐', itemStyle: { color: '#f0a500' } },
+        { value: {{ meal_lunch | round1 }}, name: '午餐', itemStyle: { color: '#2d8653' } },
+        { value: {{ meal_dinner | round1 }}, name: '晚餐', itemStyle: { color: '#1a73e8' } },
+        { value: {{ meal_snack | round1 }}, name: '零食', itemStyle: { color: '#7b2ff7' } },
+      ],
+    }],
+  });
+
+  // 6. 热量平衡仪表
+  var balanceGauge = echarts.init(document.getElementById('balance-gauge-chart'));
+  var balanceValue = {{ balance_ratio | round1 }};
+  var gaugeColor = balanceValue < 0.8 ? '#dc3545' : (balanceValue > 1.2 ? '#f0a500' : '#2d8653');
+  var gaugeStatus = balanceValue < 0.8 ? '热量不足' : (balanceValue > 1.2 ? '热量过剩' : '热量平衡');
+  balanceGauge.setOption({
+    series: [{
+      type: 'gauge',
+      center: ['50%', '60%'],
+      radius: '90%',
+      startAngle: 200,
+      endAngle: -20,
+      min: 0,
+      max: 2,
+      splitNumber: 4,
+      pointer: { itemStyle: { color: gaugeColor }, width: 4 },
+      axisTick: { distance: -15, length: 6, lineStyle: { color: '#d8edd9', width: 1 } },
+      splitLine: { distance: -18, length: 10, lineStyle: { color: '#d8edd9', width: 2 } },
+      axisLabel: {
+        color: '#6b8a77',
+        fontSize: 11,
+        distance: -25,
+        formatter: function(v) {
+          if (v === 0) return '严重不足';
+          if (v === 1) return '平衡';
+          if (v === 2) return '严重过剩';
+          return '';
+        },
+      },
+      detail: {
+        valueAnimation: true,
+        formatter: '{b}',
+        color: '#1c3028',
+        fontSize: 14,
+        fontWeight: 'bold',
+        offsetCenter: [0, '40%'],
+      },
+      data: [{ value: parseFloat(balanceValue.toFixed(1)), name: gaugeStatus }],
+      itemStyle: { color: gaugeColor },
+      title: { offsetCenter: [0, '80%'], color: '#6b8a77', fontSize: 12 },
+    }],
+  });
+
+  // 7. 运动时长趋势
+  var exTrend = echarts.init(document.getElementById('exercise-trend-chart'));
+  exTrend.setOption({
+    ...theme,
+    tooltip: { ...theme.tooltip, trigger: 'axis' },
+    grid: { ...theme.grid, left: 50 },
+    xAxis: {
+      type: 'category',
+      data: {{ exercise_trend_dates | tojson }},
+      axisLabel: { color: '#6b8a77', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#d8edd9' } },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'min',
+      axisLabel: { color: '#6b8a77', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#edf7f0', type: 'dashed' } },
+    },
+    series: [{
+      type: 'line',
+      smooth: true,
+      data: {{ exercise_trend_values | tojson }},
+      itemStyle: { color: '#52c97f' },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(82,201,127,0.3)' }, { offset: 1, color: 'rgba(82,201,127,0)' }] } },
+      lineStyle: { width: 2 },
+    }],
+  });
+
+  // 自适应
+  [calTrend, nutPie, exBar, calComp, mealPie, balanceGauge, exTrend].forEach(function(c) {
+    window.addEventListener('resize', function() { c.resize(); });
+  });
+});
+</script>
+{% endblock %}

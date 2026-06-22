@@ -1,0 +1,237 @@
+{
+  "experiment_description": "Feature selection strict comparison: Top-9 selected features vs full 15 features",
+  "experiment_date": "2026-04-14",
+  "plan_a": {
+    "description": "Strict top-9 feature selection (comprehensive ranking from RF+XGBoost+MI)",
+    "n_features": 9,
+    "selected_features": [
+      "Weight",
+      "Height",
+      "FCVC",
+      "Gender",
+      "Age",
+      "CH2O",
+      "TUE",
+      "NCP",
+      "FAF"
+    ],
+    "excluded_features": [
+      "family_history_with_overweight",
+      "FAVC",
+      "CAEC",
+      "SMOKE",
+      "SCC",
+      "CALC"
+    ],
+    "best_hyperparameters": {
+      "subsample": 0.9,
+      "reg_lambda": 5,
+      "reg_alpha": 1,
+      "n_estimators": 400,
+      "min_child_weight": 5,
+      "max_depth": 3,
+      "learning_rate": 0.15,
+      "gamma": 0,
+      "colsample_bytree": 1.0
+    },
+    "cv_accuracy_mean": 0.8961221359487659,
+    "test_accuracy": 0.9029383429672447,
+    "f1_weighted": 0.90255853927961,
+    "auc_ovr_macro": 0.9886940311541419,
+    "model_file": "plan_a_model_9feat.joblib"
+  },
+  "plan_b": {
+    "description": "All 15 original features (current production approach)",
+    "n_features": 15,
+    "selected_features": [
+      "Gender",
+      "Age",
+      "Height",
+      "Weight",
+      "family_history_with_overweight",
+      "FAVC",
+      "FCVC",
+      "NCP",
+      "CAEC",
+      "SMOKE",
+      "CH2O",
+      "SCC",
+      "FAF",
+      "TUE",
+      "CALC"
+    ],
+    "best_hyperparameters": {
+      "subsample": 0.7,
+      "reg_lambda": 10,
+      "reg_alpha": 0.01,
+      "n_estimators": 100,
+      "min_child_weight": 1,
+      "max_depth": 6,
+      "learning_rate": 0.2,
+      "gamma": 0.1,
+      "colsample_bytree": 0.7
+    },
+    "cv_accuracy_mean": 0.9080453668942334,
+    "test_accuracy": 0.9108863198458574,
+    "f1_weighted": 0.9106238004972125,
+    "auc_ovr_macro": 0.9904682420506938,
+    "model_file": "plan_b_model_15feat.joblib"
+  },
+  "comparison": {
+    "accuracy_diff_pct": 0.7948,
+    "recommended_plan": "B",
+    "recommendation_reason": "Plan B wins: higher accuracy (0.9109 > 0.9029)"
+  },
+  "full_ranking_table": [
+    {
+      "Feature": "Weight",
+      "Rank_Mean": 1.3333333333333333,
+      "RF_Rank": 1,
+      "XGB_Rank": 2,
+      "MI_Rank": 1,
+      "RF_Imp": 0.36506252239146614,
+      "XGB_Imp": 0.27195605635643005,
+      "MI_Score": 1.361965254899375
+    },
+    {
+      "Feature": "Height",
+      "Rank_Mean": 3.3333333333333335,
+      "RF_Rank": 3,
+      "XGB_Rank": 4,
+      "MI_Rank": 3,
+      "RF_Imp": 0.1030554955777459,
+      "XGB_Imp": 0.04115602374076843,
+      "MI_Score": 0.7703961488086861
+    },
+    {
+      "Feature": "FCVC",
+      "Rank_Mean": 4.0,
+      "RF_Rank": 4,
+      "XGB_Rank": 3,
+      "MI_Rank": 5,
+      "RF_Imp": 0.08589058561755661,
+      "XGB_Imp": 0.13352830708026886,
+      "MI_Score": 0.5055837399338734
+    },
+    {
+      "Feature": "Gender",
+      "Rank_Mean": 4.666666666666667,
+      "RF_Rank": 5,
+      "XGB_Rank": 1,
+      "MI_Rank": 8,
+      "RF_Imp": 0.06573448551198553,
+      "XGB_Imp": 0.31863170862197876,
+      "MI_Score": 0.2601616408883456
+    },
+    {
+      "Feature": "Age",
+      "Rank_Mean": 4.666666666666667,
+      "RF_Rank": 2,
+      "XGB_Rank": 10,
+      "MI_Rank": 2,
+      "RF_Imp": 0.10638779810645921,
+      "XGB_Imp": 0.020181581377983093,
+      "MI_Score": 0.7916374832032322
+    },
+    {
+      "Feature": "CH2O",
+      "Rank_Mean": 6.0,
+      "RF_Rank": 6,
+      "XGB_Rank": 8,
+      "MI_Rank": 4,
+      "RF_Imp": 0.04953838780677605,
+      "XGB_Imp": 0.026722580194473267,
+      "MI_Score": 0.5147345901771097
+    },
+    {
+      "Feature": "TUE",
+      "Rank_Mean": 8.666666666666666,
+      "RF_Rank": 7,
+      "XGB_Rank": 13,
+      "MI_Rank": 6,
+      "RF_Imp": 0.04877160780500382,
+      "XGB_Imp": 0.016039669513702393,
+      "MI_Score": 0.4963554553634073
+    },
+    {
+      "Feature": "NCP",
+      "Rank_Mean": 9.0,
+      "RF_Rank": 9,
+      "XGB_Rank": 9,
+      "MI_Rank": 9,
+      "RF_Imp": 0.03381960397129003,
+      "XGB_Imp": 0.02163359709084034,
+      "MI_Score": 0.2159719774163089
+    },
+    {
+      "Feature": "FAF",
+      "Rank_Mean": 9.666666666666666,
+      "RF_Rank": 8,
+      "XGB_Rank": 14,
+      "MI_Rank": 7,
+      "RF_Imp": 0.04401321892951908,
+      "XGB_Imp": 0.013747230172157288,
+      "MI_Score": 0.4617797701203279
+    },
+    {
+      "Feature": "CALC",
+      "Rank_Mean": 10.0,
+      "RF_Rank": 12,
+      "XGB_Rank": 6,
+      "MI_Rank": 12,
+      "RF_Imp": 0.024121332074694194,
+      "XGB_Imp": 0.02919108048081398,
+      "MI_Score": 0.11608525874510267
+    },
+    {
+      "Feature": "family_history_with_overweight",
+      "Rank_Mean": 10.333333333333334,
+      "RF_Rank": 10,
+      "XGB_Rank": 11,
+      "MI_Rank": 10,
+      "RF_Imp": 0.029557725594577016,
+      "XGB_Imp": 0.019150206819176674,
+      "MI_Score": 0.16753419208201104
+    },
+    {
+      "Feature": "FAVC",
+      "Rank_Mean": 10.333333333333334,
+      "RF_Rank": 13,
+      "XGB_Rank": 5,
+      "MI_Rank": 13,
+      "RF_Imp": 0.01205312663673961,
+      "XGB_Imp": 0.0365469828248024,
+      "MI_Score": 0.042712940487401596
+    },
+    {
+      "Feature": "CAEC",
+      "Rank_Mean": 11.333333333333334,
+      "RF_Rank": 11,
+      "XGB_Rank": 12,
+      "MI_Rank": 11,
+      "RF_Imp": 0.02549150789556043,
+      "XGB_Imp": 0.01763881929218769,
+      "MI_Score": 0.1441796362325083
+    },
+    {
+      "Feature": "SCC",
+      "Rank_Mean": 11.666666666666666,
+      "RF_Rank": 14,
+      "XGB_Rank": 7,
+      "MI_Rank": 14,
+      "RF_Imp": 0.005269639925391213,
+      "XGB_Imp": 0.026951048523187637,
+      "MI_Score": 0.022809749979153082
+    },
+    {
+      "Feature": "SMOKE",
+      "Rank_Mean": 15.0,
+      "RF_Rank": 15,
+      "XGB_Rank": 15,
+      "MI_Rank": 15,
+      "RF_Imp": 0.0012329621552353658,
+      "XGB_Imp": 0.006925022695213556,
+      "MI_Score": 0.0
+    }
+  ]
+}

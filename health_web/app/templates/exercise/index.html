@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}运动记录 - 健康管家{% endblock %}
+{% block topbar_title %}运动记录{% endblock %}
+
+{% block content %}
+<!-- 今日概览 -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(82,201,127,.1);color:var(--accent);"><i class="fa fa-clock-o"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_duration | default(0) }}</div>
+        <div class="stat-label">今日时长 (min)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(26,115,232,.1);color:#1a73e8;"><i class="fa fa-bolt"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_calories_burned | round1 }}</div>
+        <div class="stat-label">消耗热量 (kcal)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(240,165,0,.1);color:#f0a500;"><i class="fa fa-tachometer"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_distance | round1 }}</div>
+        <div class="stat-label">运动距离</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(123,47,247,.1);color:#7b2ff7;"><i class="fa fa-star"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_steps | default(0) }}</div>
+        <div class="stat-label">步数</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 g-lg-4">
+  <!-- 记录表单 -->
+  <div class="col-12 col-lg-5">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body p-3 p-lg-4">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(82,201,127,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-plus" style="color:var(--accent);font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">添加运动记录</h5>
+        </div>
+
+        <form method="POST" action="{{ url_for('exercise.index') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:13px;font-weight:600;">运动日期</label>
+            <input type="date" name="exercise_date" class="form-control" value="{{ today_str }}" max="{{ today_str }}" required style="min-height:44px;">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:13px;font-weight:600;">运动类型</label>
+            <select name="exercise_type" class="form-select" required id="exercise-type-select" style="min-height:44px;">
+              <option value="">请选择</option>
+              <option value="running">跑步</option>
+              <option value="walking">步行</option>
+              <option value="cycling">骑行</option>
+              <option value="swimming">游泳</option>
+              <option value="jumping_rope">跳绳</option>
+              <option value="yoga">瑜伽</option>
+              <option value="gym">健身房训练</option>
+              <option value="basketball">篮球</option>
+              <option value="football">足球</option>
+              <option value="badminton">羽毛球</option>
+              <option value="dancing">跳舞</option>
+              <option value="hiking">徒步</option>
+              <option value="climbing">爬山</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="row g-2 g-lg-3">
+            <div class="col-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">时长 (分钟)</label>
+              <input type="number" name="duration" class="form-control" placeholder="30" min="1" required style="min-height:44px;">
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">消耗热量 (kcal)</label>
+              <input type="number" name="calories_burned" class="form-control" placeholder="0" min="0" step="0.1" required style="min-height:44px;">
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">距离 (km)</label>
+              <input type="number" name="distance" class="form-control" placeholder="0" min="0" step="0.01" value="0" style="min-height:44px;">
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">步数</label>
+              <input type="number" name="steps" class="form-control" placeholder="0" min="0" value="0" style="min-height:44px;">
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">平均心率 (bpm)</label>
+              <input type="number" name="heart_rate" class="form-control" placeholder="可选" min="40" max="220" value="" style="min-height:44px;">
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">运动强度</label>
+              <select name="intensity" class="form-select" style="min-height:44px;">
+                <option value="low">低强度</option>
+                <option value="medium" selected>中等强度</option>
+                <option value="high">高强度</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 mt-3">
+            <label class="form-label" style="font-size:13px;font-weight:600;">备注</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="可选备注..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-success w-100" style="background:var(--accent);border:none;color:#000;font-weight:700;padding:12px;font-size:15px;min-height:48px;">
+            <i class="fa fa-bicycle me-1"></i>添加运动
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 今日记录 -->
+  <div class="col-lg-7">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div class="d-flex align-items-center">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(82,201,127,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+              <i class="fa fa-bicycle" style="color:var(--accent);font-size:16px;"></i>
+            </div>
+            <h5 style="font-weight:700;margin:0;">{{ today_str }} 运动记录</h5>
+          </div>
+          <a href="{{ url_for('exercise.history') }}" class="btn btn-sm" style="border:1px solid var(--accent);color:var(--accent);">
+            <i class="fa fa-history me-1"></i>历史
+          </a>
+        </div>
+
+        {% if today_records %}
+        <div class="table-responsive">
+          <table class="table table-hover" style="font-size:13px;">
+            <thead>
+              <tr>
+                <th>类型</th>
+                <th>时长</th>
+                <th>消耗</th>
+                <th>距离</th>
+                <th>步数</th>
+                <th>强度</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in today_records %}
+              <tr>
+                <td style="font-weight:600;">{{ r.exercise_type_name }}</td>
+                <td><span style="color:var(--accent);font-weight:700;">{{ r.duration | round1 }}分钟</span></td>
+                <td>{{ r.calories_burned | round1 }}kcal</td>
+                <td>{{ r.distance | round1 }}km</td>
+                <td>{{ r.steps }}</td>
+                <td>
+                  <span class="badge" style="background:{{ '#d4edda' if r.intensity=='low' else ('#fff3cd' if r.intensity=='medium' else '#f8d7da') }};color:{{ '#155724' if r.intensity=='low' else ('#856404' if r.intensity=='medium' else '#721c24') }};font-size:11px;">
+                    {{ '低' if r.intensity=='low' else ('中' if r.intensity=='medium' else '高') }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm" style="color:#dc3545;padding:4px 8px;border:none;background:none;" onclick="confirmExDelete({{ r.id }})" title="删除">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5" style="color:var(--text-muted);">
+          <i class="fa fa-bicycle" style="font-size:40px;opacity:.3;margin-bottom:12px;display:block;"></i>
+          <p style="margin:0;font-size:14px;">今日暂无运动记录</p>
+          <p style="font-size:12px;">在左侧添加您的第一条运动吧</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认 Modal -->
+<div class="modal fade" id="exDeleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:var(--radius-md);">
+      <div class="modal-header" style="border-bottom:1px solid var(--border);">
+        <h6 class="modal-title" style="font-weight:700;"><i class="fa fa-exclamation-triangle me-2" style="color:#dc3545;"></i>确认删除</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:14px;color:var(--text-muted);">
+        删除后将无法恢复，确认删除这条运动记录吗？
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border);">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <form method="POST" id="exDeleteForm" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm">确认删除</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function confirmExDelete(recordId) {
+  document.getElementById('exDeleteForm').action = '/exercise/delete/' + recordId;
+  new bootstrap.Modal(document.getElementById('exDeleteModal')).show();
+}
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.form-control, .form-select').forEach(function(el) {
+    el.addEventListener('focus', function() {
+      setTimeout(function() { window.scrollBy({ top: 100, behavior: 'smooth' }); }, 300);
+    });
+  });
+});
+</script>
+{% endblock %}

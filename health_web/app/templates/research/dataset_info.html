@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}数据集信息 - 研究者专区{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('research.index') }}">数据分析展示</a></li>
+            <li class="breadcrumb-item active">数据集信息</li>
+        </ol>
+    </nav>
+
+    <h3 class="mb-4"><i class="fa fa-database text-primary me-2"></i>数据集详细信息</h3>
+
+    <!-- 数据集概览 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="display-5 text-primary">{{ stats.train_samples + stats.test_samples if stats.train_samples and stats.test_samples else 20758 }}</div>
+                    <div class="text-muted">总样本数</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="display-5 text-success">{{ stats.train_samples if stats.train_samples else 16606 }}</div>
+                    <div class="text-muted">训练集样本</div>
+                    <small class="text-muted">(80%)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="display-5 text-info">{{ stats.test_samples if stats.test_samples else 4152 }}</div>
+                    <div class="text-muted">测试集样本</div>
+                    <small class="text-muted">(20%)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="display-5 text-warning">{{ stats.feature_count if stats.feature_count else 15 }}</div>
+                    <div class="text-muted">特征数量</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 特征列表 -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">
+            <i class="fa fa-list me-2"></i>特征列表
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% if stats.features %}
+                    {% for feature in stats.features %}
+                    <div class="col-md-4 col-lg-3 mb-2">
+                        <span class="badge bg-light text-dark border me-1">{{ loop.index }}</span>
+                        <code>{{ feature }}</code>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <p class="text-muted">特征列表加载中...</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据预处理流程 -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <i class="fa fa-cogs me-2"></i>数据预处理流程
+        </div>
+        <div class="card-body">
+            <div class="timeline">
+                <div class="row g-0">
+                    <div class="col-md-3 text-center">
+                        <div class="p-3 bg-light rounded mx-2">
+                            <i class="fa fa-download fa-2x text-primary mb-2"></i>
+                            <h6>1. 数据加载</h6>
+                            <small class="text-muted">读取CSV文件<br>20758条记录</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3 bg-light rounded mx-2">
+                            <i class="fa fa-filter fa-2x text-success mb-2"></i>
+                            <h6>2. 数据清洗</h6>
+                            <small class="text-muted">修正标签拼写错误<br>删除重复值</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3 bg-light rounded mx-2">
+                            <i class="fa fa-code fa-2x text-info mb-2"></i>
+                            <h6>3. 特征编码</h6>
+                            <small class="text-muted">二值编码/有序编码<br>类别特征数值化</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3 bg-light rounded mx-2">
+                            <i class="fa fa-sliders fa-2x text-warning mb-2"></i>
+                            <h6>4. 标准化</h6>
+                            <small class="text-muted">StandardScaler<br>连续特征标准化</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 目标变量分布 -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-success text-white">
+            <i class="fa fa-pie-chart me-2"></i>目标变量分布（7分类）
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>类别</th>
+                                <th>中文名</th>
+                                <th class="text-end">占比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-info">Insufficient_Weight</span></td>
+                                <td>体重不足</td>
+                                <td class="text-end">~12.5%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">Normal_Weight</span></td>
+                                <td>正常体重</td>
+                                <td class="text-end">~12.5%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning">Overweight_Level_I</span></td>
+                                <td>超重I级</td>
+                                <td class="text-end">~12.5%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning text-dark">Overweight_Level_II</span></td>
+                                <td>超重II级</td>
+                                <td class="text-end">~12.5%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-danger">Obesity_Type_I</span></td>
+                                <td>肥胖I型</td>
+                                <td class="text-end">~12.5%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-danger">Obesity_Type_II</span></td>
+                                <td>肥胖II型</td>
+                                <td class="text-end">~12.5%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-dark">Obesity_Type_III</span></td>
+                                <td>肥胖III型</td>
+                                <td class="text-end">~12.5%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-light border h-100 d-flex align-items-center">
+                        <div>
+                            <h6><i class="fa fa-info-circle text-info me-2"></i>数据平衡说明</h6>
+                            <p class="mb-0 text-muted">
+                                数据集采用近似平衡采样，7个类别各占约12.5%。
+                                这种平衡设计有利于模型学习各类别的特征模式，
+                                避免因类别不平衡导致的预测偏差。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

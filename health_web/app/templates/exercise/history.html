@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}运动历史 - 健康管家{% endblock %}
+{% block topbar_title %}运动历史{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 style="font-weight:700;margin:0;"><i class="fa fa-history me-2" style="color:var(--accent);"></i>运动记录历史</h4>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('analysis.export_exercise') }}" class="btn btn-sm btn-outline-primary">
+      <i class="fa fa-download me-1"></i>导出CSV
+    </a>
+    <a href="{{ url_for('exercise.index') }}" class="btn btn-sm" style="background:var(--accent);border:none;color:#000;font-weight:700;">
+      <i class="fa fa-plus me-1"></i>添加运动
+    </a>
+  </div>
+</div>
+
+<div class="card mb-4" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+  <div class="card-body p-3">
+    <form method="GET" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:12px;font-weight:600;">开始日期</label>
+        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:12px;font-weight:600;">结束日期</label>
+        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" style="font-size:12px;font-weight:600;">运动类型</label>
+        <select name="exercise_type" class="form-select">
+          <option value="">全部</option>
+          {% for t in types %}
+          <option value="{{ t }}" {{ 'selected' if exercise_type==t else '' }}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-success w-100" style="background:var(--accent);border:none;color:#000;font-weight:700;">
+          <i class="fa fa-search me-1"></i>筛选
+        </button>
+      </div>
+      <div class="col-md-2">
+        <a href="{{ url_for('exercise.history') }}" class="btn btn-outline-secondary w-100" style="font-size:13px;">
+          <i class="fa fa-refresh me-1"></i>重置
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if records %}
+<div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>类型</th>
+            <th>时长 (min)</th>
+            <th>消耗热量 (kcal)</th>
+            <th>距离 (km)</th>
+            <th>步数</th>
+            <th>心率 (bpm)</th>
+            <th>强度</th>
+            <th>备注</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td style="font-weight:600;color:var(--accent);">{{ r.exercise_date.strftime('%m-%d') }}</td>
+            <td style="font-weight:600;">{{ r.exercise_type_name }}</td>
+            <td>{{ r.duration | round1 }}</td>
+            <td><span style="color:var(--accent);font-weight:700;">{{ r.calories_burned | round1 }}</span></td>
+            <td>{{ r.distance | round1 }}</td>
+            <td>{{ r.steps }}</td>
+            <td>{{ r.heart_rate or '-' }}</td>
+            <td>
+              <span class="badge" style="background:{{ '#d4edda' if r.intensity=='low' else ('#fff3cd' if r.intensity=='medium' else '#f8d7da') }};color:{{ '#155724' if r.intensity=='low' else ('#856404' if r.intensity=='medium' else '#721c24') }};font-size:11px;">
+                {{ '低' if r.intensity=='low' else ('中' if r.intensity=='medium' else '高') }}
+              </span>
+            </td>
+            <td style="color:var(--text-muted);font-size:12px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.notes or '' }}">{{ r.notes or '-' }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('exercise.delete', record_id=r.id) }}" style="display:inline;" onsubmit="return confirm('确认删除？');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm" style="color:#dc3545;padding:2px 6px;border:none;background:none;"><i class="fa fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center" style="font-size:13px;">
+    {% if pagination.has_prev %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('exercise.history', page=pagination.prev_num, start_date=start_date, end_date=end_date, exercise_type=exercise_type) }}" style="color:var(--accent);">上一页</a></li>
+    {% endif %}
+    {% for p in pagination.iter_pages() %}
+      {% if p %}
+        <li class="page-item {{ 'active' if p==pagination.page else '' }}"><a class="page-link" href="{{ url_for('exercise.history', page=p, start_date=start_date, end_date=end_date, exercise_type=exercise_type) }}" style="{{ 'background:var(--accent);border-color:var(--accent);color:#000;' if p==pagination.page else 'color:var(--accent);' }}">{{ p }}</a></li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+      {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('exercise.history', page=pagination.next_num, start_date=start_date, end_date=end_date, exercise_type=exercise_type) }}" style="color:var(--accent);">下一页</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5" style="background:var(--bg);border-radius:var(--radius);">
+  <i class="fa fa-folder-open" style="font-size:48px;color:#d8edd9;margin-bottom:16px;"></i>
+  <p style="color:var(--text-muted);font-size:15px;margin:0;">暂无符合条件的记录</p>
+</div>
+{% endif %}
+{% endblock %}

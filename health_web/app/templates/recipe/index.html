@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+
+{% block page_title %}菜谱库{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# 顶部标题栏 #}
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+      <h4 class="mb-0">
+        <i class="fa fa-book text-success me-2"></i>菜谱库
+      </h4>
+      <small class="text-muted">共 <span id="total-count">--</span> 道菜谱</small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="input-group" style="min-width:220px; max-width:320px;">
+        <input type="text" id="search-input" class="form-control"
+               placeholder="搜索菜名/主料/类别..."
+               onkeydown="if(event.key==='Enter') loadRecipes(1)">
+        <button class="btn btn-success" onclick="loadRecipes(1)">
+          <i class="fa fa-search"></i>
+        </button>
+      </div>
+      <select id="sort-select" class="form-select" style="width:auto;"
+              onchange="loadRecipes(1)">
+        <option value="recommend">推荐指数</option>
+        <option value="calories_asc">热量 从低到高</option>
+        <option value="calories_desc">热量 从高到低</option>
+      </select>
+    </div>
+  </div>
+
+  {# 筛选栏 - 可折叠 #}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-2">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted small fw-semibold">
+          <i class="fa fa-filter text-success me-1"></i>筛选条件
+          <small class="text-muted ms-2" id="filter-summary"></small>
+        </span>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+          <i class="fa fa-chevron-down"></i> 展开/收起
+        </button>
+      </div>
+      <div class="collapse" id="filterCollapse">
+        <div class="pt-2 border-top">
+          <div class="mb-3">
+            <span class="text-muted small fw-semibold d-block mb-2">工艺：</span>
+            <div class="d-flex gap-1 flex-wrap" id="gongyi-filters">
+              <button class="btn btn-sm btn-outline-success active" data-gongyi=""
+                      onclick="toggleFilter(this, 'gongyi'); loadRecipes(1)">全部</button>
+            </div>
+          </div>
+          <div>
+            <span class="text-muted small fw-semibold d-block mb-2">口味：</span>
+            <div class="d-flex gap-1 flex-wrap" id="kouwei-filters">
+              <button class="btn btn-sm btn-outline-success active" data-kouwei=""
+                      onclick="toggleFilter(this, 'kouwei'); loadRecipes(1)">全部</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# 菜谱卡片网格 #}
+  <div class="row g-3" id="recipe-grid">
+    <div class="col-12 text-center py-5 text-muted">
+      <i class="fa fa-spinner fa-spin fa-2x"></i>
+      <p class="mt-2">加载中...</p>
+    </div>
+  </div>
+
+  {# 分页 #}
+  <div class="d-flex justify-content-center mt-4" id="pagination-wrap"></div>
+
+</div>
+
+{# 菜谱详情弹窗 #}
+<div class="modal fade" id="recipeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+      <div class="modal-header border-0" style="background:linear-gradient(135deg,#2d7d46,#52c774);">
+        <h5 class="modal-title text-white" id="modal-title">
+          <i class="fa fa-cutlery me-2"></i><span id="modal-title-text">加载中...</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4" id="modal-body" style="background:#f8faf8;">
+        <div class="text-center text-muted py-5">
+          <i class="fa fa-spinner fa-spin fa-2x"></i>
+          <p class="mt-2">加载菜谱详情...</p>
+        </div>
+      </div>
+      <div class="modal-footer border-0" style="background:#f0f5f0;">
+        <div class="d-flex align-items-center gap-3 me-auto">
+          <label class="small fw-semibold text-muted mb-0">份量：</label>
+          <input type="number" id="modal-portion" class="form-control form-control-sm"
+                 value="100" min="10" max="5000" style="width:100px;"
+                 oninput="updateModalCalories()">
+          <span class="small text-muted">克</span>
+          <span class="badge bg-success" id="modal-cal-badge">-- kcal</span>
+        </div>
+        <select id="modal-meal-type" class="form-select form-select-sm" style="width:auto;">
+          <option value="breakfast">早餐</option>
+          <option value="lunch">午餐</option>
+          <option value="dinner">晚餐</option>
+          <option value="snack">加餐</option>
+        </select>
+        <button type="button" class="btn btn-success" id="modal-add-btn" onclick="addToDiet()">
+          <i class="fa fa-plus me-1"></i>加入饮食记录
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
+<script>
+// ── 全局状态 ────────────────────────────────────────────────────
+let currentPage  = 1;
+let gongyiFilter = "";
+let kouweiFilter = "";
+let currentRecipe = null;   // 当前弹窗完整数据（从 /api/detail 加载）
+let _filtersLoaded = false;
+
+// ── 初始化 ──────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("[DEBUG] DOM loaded, starting loadRecipes...");
+  // 先加载筛选选项（一次性，不在翻页时重复请求）
+  loadFilters();
+  loadRecipes(1);
+});
+
+// ── 加载筛选选项（仅一次）─────────────────────────────────────────
+function loadFilters() {
+  if (_filtersLoaded) return;
+  console.log("[DEBUG] loading filters...");
+  fetch("/recipes/api/filters")
+    .then(r => { console.log("[DEBUG] filters status:", r.status); return r.json(); })
+    .then(data => {
+      console.log("[DEBUG] filters data:", data);
+      renderGongyiBtns(data.gongyi_opts || []);
+      renderKouweiBtns(data.kouwei_opts || []);
+      _filtersLoaded = true;
+    })
+    .catch(e => console.error("[DEBUG] filters error:", e));
+}
+
+// ── 加载菜谱列表（翻页时不带筛选选项，减少请求体）───────────────────
+function loadRecipes(page) {
+  console.log("[DEBUG] loadRecipes called, page:", page);
+  currentPage = page;
+  const q      = document.getElementById("search-input").value.trim();
+  const sort   = document.getElementById("sort-select").value;
+  const perPage = 12;
+
+  const params = new URLSearchParams({
+    q: q, sort: sort, page: page, per_page: perPage,
+    gongyi: gongyiFilter, kouwei: kouweiFilter,
+    include_filters: "0",
+  });
+
+  const url = `/recipes/api/list?${params}`;
+  console.log("[DEBUG] fetching:", url);
+  fetch(url)
+    .then(r => { console.log("[DEBUG] list status:", r.status); return r.json(); })
+    .then(data => {
+      console.log("[DEBUG] list data:", data);
+      renderGrid(data.items);
+      renderPagination(data.total, data.pages, page);
+      document.getElementById("total-count").textContent = data.total;
+    })
+    .catch(e => {
+      console.error("[DEBUG] list error:", e);
+      document.getElementById("recipe-grid").innerHTML =
+        '<div class="col-12 text-center text-danger py-5">加载失败，请刷新重试</div>';
+    });
+}
+
+// ── 渲染菜谱卡片 ─────────────────────────────────────────────────
+function renderGrid(items) {
+  const grid = document.getElementById("recipe-grid");
+  if (!items || items.length === 0) {
+    grid.innerHTML = '<div class="col-12 text-center text-muted py-5"><i class="fa fa-search fa-2x"></i><p class="mt-2">未找到匹配的菜谱</p></div>';
+    return;
+  }
+  grid.innerHTML = items.map(item => `
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm recipe-card"
+           style="border-radius:14px; cursor:pointer; transition:transform .2s, box-shadow .2s;"
+           onclick='openRecipe(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
+        <div class="card-body p-3">
+          <h6 class="fw-bold text-dark mb-2" style="font-size:1rem;" title="${esc(item.title)}">${esc(item.title)}</h6>
+          <div class="d-flex gap-1 flex-wrap mb-2">
+            ${item.cooking_method ? `<span class="badge bg-light text-dark border">${esc(item.cooking_method)}</span>` : ""}
+            ${item.taste ? `<span class="badge bg-light text-dark border">${esc(item.taste)}</span>` : ""}
+          </div>
+          <p class="small text-muted mb-2" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(item.main_ingredient || "")}">
+            <i class="fa fa-leaf me-1 text-success"></i>${esc(item.main_ingredient || "—")}
+          </p>
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="small fw-semibold text-success">
+              ${item.calories != null ? item.calories.toFixed(0) + " kcal" : "热量未知"}
+            </span>
+          </div>
+          <div class="mt-1 d-flex gap-2 small text-muted mb-2">
+            ${item.protein != null ? `<span>蛋白 ${item.protein.toFixed(1)}g</span>` : ""}
+            ${item.fat    != null ? `<span>脂肪 ${item.fat.toFixed(1)}g</span>` : ""}
+            ${item.carbs  != null ? `<span>碳水 ${item.carbs.toFixed(1)}g</span>` : ""}
+          </div>
+          <div class="mt-auto">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small text-muted">推荐指数</span>
+              <span class="small fw-semibold ${item.recommend_score >= 7 ? 'text-success' : item.recommend_score >= 4 ? 'text-warning' : 'text-danger'}">${(item.recommend_score || 0).toFixed(1)}/10</span>
+            </div>
+            <div class="progress" style="height:5px;">
+              <div class="progress-bar ${item.recommend_score >= 7 ? 'bg-success' : item.recommend_score >= 4 ? 'bg-warning' : 'bg-danger'}"
+                   style="width:${Math.min(100, ((item.recommend_score || 0) / 10) * 100)}%"></div>
+            </div>
+            <div class="small text-muted mt-1" style="font-size:10px;">
+              ${item.recommend_score >= 7 ? '高蛋白低脂优选' : item.recommend_score >= 4 ? '营养均衡' : '热量偏高'}
+            </div>
+          </div>
+        </div>
+        <div class="card-footer bg-transparent border-0 text-center pb-3">
+          <button class="btn btn-sm btn-outline-success w-75" onclick="event.stopPropagation(); openRecipe(${JSON.stringify(item).replace(/'/g, "&#39;")})">
+            <i class="fa fa-eye me-1"></i>查看详情
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  grid.querySelectorAll(".recipe-card").forEach(card => {
+    card.addEventListener("mouseenter", () => {
+      card.style.transform = "translateY(-4px)";
+      card.style.boxShadow = "0 8px 24px rgba(0,0,0,.12)";
+    });
+    card.addEventListener("mouseleave", () => {
+      card.style.transform = "";
+      card.style.boxShadow = "";
+    });
+  });
+}
+
+// ── 渲染分页 ─────────────────────────────────────────────────────
+function renderPagination(total, pages, cur) {
+  const wrap = document.getElementById("pagination-wrap");
+  if (pages <= 1) { wrap.innerHTML = ""; return; }
+  let html = `<ul class="pagination mb-0">`;
+  html += `<li class="page-item ${cur<=1?"disabled":""}">
+    <a class="page-link" href="javascript:loadRecipes(${cur-1})">&laquo;</a></li>`;
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || Math.abs(i - cur) <= 2) {
+      html += `<li class="page-item ${i===cur?"active":""}">
+        <a class="page-link" href="javascript:loadRecipes(${i})">${i}</a></li>`;
+    } else if (Math.abs(i - cur) === 3) {
+      html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+    }
+  }
+  html += `<li class="page-item ${cur>=pages?"disabled":""}">
+    <a class="page-link" href="javascript:loadRecipes(${cur+1})">&raquo;</a></li>`;
+  html += `</ul>`;
+  wrap.innerHTML = html;
+}
+
+// ── 渲染筛选按钮 ─────────────────────────────────────────────────
+function renderGongyiBtns(opts) {
+  const container = document.getElementById("gongyi-filters");
+  if (!container) return;
+  opts.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm btn-outline-success";
+    btn.dataset.gongyi = opt;
+    btn.textContent = opt;
+    btn.onclick = () => toggleFilter(btn, "gongyi") || loadRecipes(1);
+    container.appendChild(btn);
+  });
+}
+
+function renderKouweiBtns(opts) {
+  const container = document.getElementById("kouwei-filters");
+  if (!container) return;
+  opts.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm btn-outline-success";
+    btn.dataset.kouwei = opt;
+    btn.textContent = opt;
+    btn.onclick = () => toggleFilter(btn, "kouwei") || loadRecipes(1);
+    container.appendChild(btn);
+  });
+}
+
+function toggleFilter(btn, type) {
+  const container = btn.parentElement;
+  container.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  if (type === "gongyi") gongyiFilter = btn.dataset.gongyi || "";
+  else                   kouweiFilter = btn.dataset.kouwei || "";
+}
+
+// ── 打开菜谱详情弹窗 ─────────────────────────────────────────────
+// openRecipe 接收列表页传入的简要 item，再用 /api/detail 加载完整数据
+function openRecipe(item) {
+  currentRecipe = { id: item.id, calories: item.calories };
+  document.getElementById("modal-title-text").textContent = item.title || "加载中...";
+  document.getElementById("modal-portion").value = 100;
+  document.getElementById("modal-body").innerHTML =
+    '<div class="text-center text-muted py-5"><i class="fa fa-spinner fa-spin fa-2x"></i><p class="mt-2">加载菜谱详情...</p></div>';
+  updateModalCalories();
+
+  const modalEl = document.getElementById("recipeModal");
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+
+  // JSON API 加载完整数据
+  fetch(`/recipes/api/detail/${item.id}`)
+    .then(r => r.json())
+    .then(data => {
+      currentRecipe = { id: data.id, calories: data.calories };
+      document.getElementById("modal-body").innerHTML = buildDetailHTML(data);
+      updateModalCalories();
+    })
+    .catch(() => {
+      document.getElementById("modal-body").innerHTML =
+        '<div class="text-danger text-center py-4">加载失败，请重试</div>';
+    });
+}
+
+// ── 构建详情 HTML（纯 JS，无后端渲染）───────────────────────────────
+function buildDetailHTML(d) {
+  const scores = [
+    ["推荐指数", d.recommend_score],
+    ["麻辣指数", d.spicy_score],
+    ["营养指数", d.nutrition_score],
+    ["难度指数", d.difficulty_score],
+    ["耗时指数", d.time_score],
+    ["减肥指数", d.diet_score],
+    ["养颜指数", d.seasoning_score],
+  ];
+
+  const scoreBar = (label, val) => {
+    const pct = Math.min(100, (val / 10) * 100);
+    const color = pct >= 70 ? "bg-success" : pct >= 40 ? "bg-warning" : "bg-secondary";
+    return `<div class="mb-2">
+      <div class="d-flex justify-content-between small mb-1">
+        <span>${label}</span><span class="fw-bold">${val || 0}/10</span>
+      </div>
+      <div class="progress" style="height:6px;">
+        <div class="progress-bar ${color}" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+  };
+
+  const nutritionRows = d.all_nutrients || {};
+  const mainNutKeys = ["热量", "蛋白质", "脂肪", "碳水", "膳食纤维"];
+  const mainNut = mainNutKeys.map(k => {
+    const v = nutritionRows[k] || "—";
+    return `<tr><td class="fw-semibold text-success">${k}</td><td>${v}</td></tr>`;
+  }).join("");
+
+  const otherNut = Object.entries(nutritionRows)
+    .filter(([k]) => !mainNutKeys.includes(k))
+    .map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`)
+    .join("");
+
+  const steps = (d.instructions || "暂无做法说明")
+    .split(/\n|\r/)
+    .filter(s => s.trim())
+    .map((s, i) => `<div class="d-flex gap-3 mb-3">
+      <div class="flex-shrink-0" style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;">${i+1}</div>
+      <div class="small text-secondary pt-1">${esc(s.trim())}</div>
+    </div>`)
+    .join("");
+
+  return `
+    <div class="row g-4">
+
+      <!-- 左列：基本信息 -->
+      <div class="col-lg-5">
+        <div class="mb-3">
+          <div class="d-flex gap-2 flex-wrap mb-2">
+            ${d.cooking_method ? `<span class="badge bg-success">${esc(d.cooking_method)}</span>` : ""}
+            ${d.taste ? `<span class="badge bg-warning text-dark">${esc(d.taste)}</span>` : ""}
+            ${d.category ? `<span class="badge bg-info text-dark">${esc(d.category)}</span>` : ""}
+          </div>
+          ${d.suitable ? `<p class="small text-muted mb-1"><i class="fa fa-users me-1"></i>${esc(d.suitable)}</p>` : ""}
+          ${d.mouthfeel ? `<p class="small text-muted"><i class="fa fa-smile-o me-1"></i>${esc(d.mouthfeel)}</p>` : ""}
+        </div>
+
+        <!-- 评分雷达 -->
+        <h6 class="fw-bold text-dark mb-3">
+          <i class="fa fa-star text-warning me-1"></i>七维评分
+        </h6>
+        <div class="px-2">
+          ${scores.map(([l, v]) => scoreBar(l, v)).join("")}
+        </div>
+      </div>
+
+      <!-- 右列：营养成分 -->
+      <div class="col-lg-7">
+        <h6 class="fw-bold text-dark mb-3">
+          <i class="fa fa-pie-chart text-success me-1"></i>营养成分（每100g）
+        </h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered small mb-0" style="border-radius:10px;overflow:hidden;">
+            <thead class="table-success">
+              <tr><th class="w-50">营养素</th><th>含量</th></tr>
+            </thead>
+            <tbody>
+              ${mainNut}
+              ${otherNut}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 原料信息 -->
+    ${(d.main_ingredient || d.sub_ingredient || d.seasoning) ? `
+    <hr>
+    <div class="row g-3 small">
+      ${d.main_ingredient ? `<div class="col-md-4"><div class="fw-bold text-success mb-1"><i class="fa fa-lemon-o me-1"></i>主料</div><div class="text-secondary">${esc(d.main_ingredient)}</div></div>` : ""}
+      ${d.sub_ingredient ? `<div class="col-md-4"><div class="fw-bold text-info mb-1"><i class="fa fa-leaf me-1"></i>辅料</div><div class="text-secondary">${esc(d.sub_ingredient)}</div></div>` : ""}
+      ${d.seasoning ? `<div class="col-md-4"><div class="fw-bold text-warning mb-1"><i class="fa fa-flask me-1"></i>调料</div><div class="text-secondary">${esc(d.seasoning)}</div></div>` : ""}
+    </div>` : ""}
+
+    <!-- 做法步骤 -->
+    <hr>
+    <h6 class="fw-bold text-dark mb-3">
+      <i class="fa fa-list-ol text-success me-1"></i>烹饪步骤
+    </h6>
+    <div>${steps || '<div class="text-muted small">暂无做法说明</div>'}</div>
+  `;
+}
+
+// ── 更新弹窗热量标签 ──────────────────────────────────────────────
+function updateModalCalories() {
+  if (!currentRecipe || currentRecipe.calories == null) return;
+  const portion = parseFloat(document.getElementById("modal-portion").value) || 100;
+  const cal = (currentRecipe.calories * portion / 100).toFixed(0);
+  document.getElementById("modal-cal-badge").textContent = cal + " kcal";
+}
+
+// ── 加入饮食记录 ──────────────────────────────────────────────────
+function addToDiet() {
+  if (!currentRecipe) return;
+  const portion  = parseFloat(document.getElementById("modal-portion").value) || 100;
+  const mealType = document.getElementById("modal-meal-type").value;
+  const btn = document.getElementById("modal-add-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 加入中...';
+
+  const formData = new FormData();
+  formData.append("recipe_id",  currentRecipe.id);
+  formData.append("meal_type",  mealType);
+  formData.append("portion_g",   portion);
+  formData.append("csrf_token", document.querySelector("meta[name=csrf-token]")?.content || "");
+
+  fetch("/recipes/add-to-diet", { method: "POST", body: formData })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa fa-plus me-1"></i>加入饮食记录';
+      if (data.success) {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("recipeModal")).hide();
+        showToast(data.message, "success");
+      } else {
+        showToast(data.message || "添加失败，请先登录", "danger");
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa fa-plus me-1"></i>加入饮食记录';
+      showToast("网络错误，请重试", "danger");
+    });
+}
+
+// ── Toast 提示 ────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const container = document.getElementById("toast-container") || (() => {
+    const el = document.createElement("div");
+    el.id = "toast-container";
+    el.className = "position-fixed top-0 end-0 p-3";
+    el.style.zIndex = 9999;
+    document.body.appendChild(el);
+    return el;
+  })();
+  const id = "toast-" + Date.now();
+  container.insertAdjacentHTML("beforeend",
+    `<div id="${id}" class="toast align-items-center text-white bg-${type} border-0" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">${esc(msg)}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>`);
+  const toastEl = document.getElementById(id);
+  const toast = new bootstrap.Toast(toastEl);
+  toast.show();
+  toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
+}
+
+// ── HTML 特殊字符转义 ─────────────────────────────────────────────
+function esc(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+</script>
+{% endblock %}

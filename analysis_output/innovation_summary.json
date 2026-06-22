@@ -1,0 +1,217 @@
+{
+  "baseline": {
+    "model": "XGBoost",
+    "accuracy": 0.9108863198458574,
+    "f1_weighted": 0.9106238004972125,
+    "auc_ovr_macro": 0.9904682420506938
+  },
+  "innovation_1_hybrid": {
+    "description": "NHC-guideline constrained hybrid model (ML + Rule fusion)",
+    "best_alpha": 0.7,
+    "accuracy": 0.910645472061657,
+    "f1_weighted": 0.9104220121709728,
+    "auc_ovr_macro": 0.9897171215324937,
+    "boundary_region_improvement": null,
+    "alpha_sensitivity": {
+      "0.5": {
+        "accuracy": 0.9096820809248555,
+        "f1": 0.9094331567091797,
+        "auc": 0.9884303132556794
+      },
+      "0.6": {
+        "accuracy": 0.9099229287090559,
+        "f1": 0.9096913869426827,
+        "auc": 0.989199846015962
+      },
+      "0.7": {
+        "accuracy": 0.910645472061657,
+        "f1": 0.9104220121709728,
+        "auc": 0.9897171215324937
+      },
+      "0.8": {
+        "accuracy": 0.910645472061657,
+        "f1": 0.9104012556544141,
+        "auc": 0.9899908887576974
+      },
+      "0.9": {
+        "accuracy": 0.9104046242774566,
+        "f1": 0.9101455508947348,
+        "auc": 0.9903325759607018
+      }
+    }
+  },
+  "innovation_2_shap": {
+    "description": "SHAP-based individual feature attribution",
+    "shap_available": true,
+    "global_top5_features": [
+      {
+        "feature": "family_history_with_overweight",
+        "cn_name": "家族肥胖史",
+        "mean_abs_shap": 0.43305766582489014
+      },
+      {
+        "feature": "Gender",
+        "cn_name": "性别",
+        "mean_abs_shap": 0.3720864951610565
+      },
+      {
+        "feature": "Weight",
+        "cn_name": "体重",
+        "mean_abs_shap": 0.369074285030365
+      },
+      {
+        "feature": "Age",
+        "cn_name": "年龄",
+        "mean_abs_shap": 0.31562837958335876
+      },
+      {
+        "feature": "Height",
+        "cn_name": "身高",
+        "mean_abs_shap": 0.28295212984085083
+      }
+    ],
+    "individual_examples": [
+      {
+        "sample_idx": "0",
+        "true_label": "Normal_Weight",
+        "pred_label": "Normal_Weight",
+        "top3_factors": [
+          {
+            "feature": "Weight",
+            "feature_cn": "体重",
+            "shap_value": -1.1537,
+            "direction": "降低风险",
+            "contribution": "体重(-1.1537)"
+          },
+          {
+            "feature": "family_history_with_overweight",
+            "feature_cn": "家族肥胖史",
+            "shap_value": 0.2839,
+            "direction": "增加风险",
+            "contribution": "家族肥胖史(+0.2839)"
+          },
+          {
+            "feature": "Gender",
+            "feature_cn": "性别",
+            "shap_value": -0.2629,
+            "direction": "降低风险",
+            "contribution": "性别(-0.2629)"
+          }
+        ],
+        "summary": "体重(-1.1537)、家族肥胖史(+0.2839)、性别(-0.2629)"
+      },
+      {
+        "sample_idx": "4",
+        "true_label": "Obesity_Type_I",
+        "pred_label": "Obesity_Type_I",
+        "top3_factors": [
+          {
+            "feature": "FAVC",
+            "feature_cn": "高热量食物",
+            "shap_value": -0.1215,
+            "direction": "降低风险",
+            "contribution": "高热量食物(-0.1215)"
+          },
+          {
+            "feature": "Age",
+            "feature_cn": "年龄",
+            "shap_value": -0.0603,
+            "direction": "降低风险",
+            "contribution": "年龄(-0.0603)"
+          },
+          {
+            "feature": "FCVC",
+            "feature_cn": "蔬菜摄入频率",
+            "shap_value": 0.0562,
+            "direction": "增加风险",
+            "contribution": "蔬菜摄入频率(+0.0562)"
+          }
+        ],
+        "summary": "高热量食物(-0.1215)、年龄(-0.0603)、蔬菜摄入频率(+0.0562)"
+      },
+      {
+        "sample_idx": "2",
+        "true_label": "Obesity_Type_II",
+        "pred_label": "Obesity_Type_II",
+        "top3_factors": [
+          {
+            "feature": "Weight",
+            "feature_cn": "体重",
+            "shap_value": -0.3664,
+            "direction": "降低风险",
+            "contribution": "体重(-0.3664)"
+          },
+          {
+            "feature": "Height",
+            "feature_cn": "身高",
+            "shap_value": 0.3626,
+            "direction": "增加风险",
+            "contribution": "身高(+0.3626)"
+          },
+          {
+            "feature": "family_history_with_overweight",
+            "feature_cn": "家族肥胖史",
+            "shap_value": 0.3539,
+            "direction": "增加风险",
+            "contribution": "家族肥胖史(+0.3539)"
+          }
+        ],
+        "summary": "体重(-0.3664)、身高(+0.3626)、家族肥胖史(+0.3539)"
+      },
+      {
+        "sample_idx": "3",
+        "true_label": "Obesity_Type_III",
+        "pred_label": "Obesity_Type_III",
+        "top3_factors": [
+          {
+            "feature": "Gender",
+            "feature_cn": "性别",
+            "shap_value": -3.2395,
+            "direction": "降低风险",
+            "contribution": "性别(-3.2395)"
+          },
+          {
+            "feature": "Weight",
+            "feature_cn": "体重",
+            "shap_value": -2.1414,
+            "direction": "降低风险",
+            "contribution": "体重(-2.1414)"
+          },
+          {
+            "feature": "family_history_with_overweight",
+            "feature_cn": "家族肥胖史",
+            "shap_value": -2.0803,
+            "direction": "降低风险",
+            "contribution": "家族肥胖史(-2.0803)"
+          }
+        ],
+        "summary": "性别(-3.2395)、体重(-2.1414)、家族肥胖史(-2.0803)"
+      }
+    ]
+  },
+  "innovation_3_feature_engineering_stacking": {
+    "description": "Interaction features + Stacking ensemble",
+    "interaction_features": [
+      "BMI",
+      "Age_x_FAF",
+      "Weight_x_FAVC",
+      "FAF_x_TUE",
+      "FCVC_x_CH2O"
+    ],
+    "xgb_enhanced": {
+      "accuracy": 0.9079961464354528,
+      "f1_weighted": 0.9075991920887929,
+      "auc_ovr_macro": 0.989918620727068
+    },
+    "stacking_raw_features": {
+      "accuracy": 0.9123314065510597,
+      "f1_weighted": 0.9122082676094491,
+      "auc_ovr_macro": 0.9894690608747431
+    },
+    "stacking_with_interaction": {
+      "accuracy": 0.9096820809248555,
+      "f1_weighted": 0.9094097781575128,
+      "auc_ovr_macro": 0.9889156890450718
+    }
+  }
+}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}个人资料 - 健康管家{% endblock %}
+{% block topbar_title %}个人资料{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- 头像卡片 -->
+  <div class="col-lg-4">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body text-center py-5">
+        <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:36px;margin:0 auto 16px;">
+          {{ (current_user.nickname or current_user.username)[0].upper() }}
+        </div>
+        <h5 style="font-weight:700;">{{ current_user.nickname or current_user.username }}</h5>
+        <p style="color:var(--text-muted);font-size:13px;">{{ current_user.email }}</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap mt-3">
+          <div class="text-center">
+            <div style="font-size:20px;font-weight:800;color:var(--primary);">{{ stats.diet_count or 0 }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">饮食记录</div>
+          </div>
+          <div style="width:1px;background:var(--border);"></div>
+          <div class="text-center">
+            <div style="font-size:20px;font-weight:800;color:var(--primary);">{{ stats.exercise_count or 0 }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">运动记录</div>
+          </div>
+          <div style="width:1px;background:var(--border);"></div>
+          <div class="text-center">
+            <div style="font-size:20px;font-weight:800;color:var(--primary);">{{ stats.predict_count or 0 }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">风险判定</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑表单 -->
+  <div class="col-lg-8">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body p-4">
+        <h5 style="font-weight:700;margin-bottom:24px;"><i class="fa fa-pencil me-2" style="color:var(--primary);"></i>编辑个人信息</h5>
+        <form method="POST" action="{{ url_for('auth.profile') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="update_profile">
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">用户名</label>
+              <input type="text" class="form-control" value="{{ current_user.username }}" disabled>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">用户名不可修改</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">昵称</label>
+              <input type="text" name="nickname" class="form-control" value="{{ current_user.nickname or '' }}" placeholder="设置昵称">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">邮箱</label>
+              <input type="email" name="email" class="form-control" value="{{ current_user.email or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">真实姓名</label>
+              <input type="text" name="realname" class="form-control" value="{{ current_user.realname or '' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">性别</label>
+              <select name="gender" class="form-select">
+                <option value="">未设置</option>
+                <option value="male" {{ 'selected' if current_user.gender=='male' else '' }}>男</option>
+                <option value="female" {{ 'selected' if current_user.gender=='female' else '' }}>女</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">身高 (cm)</label>
+              <input type="number" name="height" class="form-control" value="{{ current_user.height or '' }}" placeholder="170" min="100" max="250">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">体重 (kg)</label>
+              <input type="number" name="weight" class="form-control" value="{{ current_user.weight or '' }}" placeholder="65" min="30" max="300" step="0.1">
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success" style="background:var(--primary);border:none;font-weight:700;">
+              <i class="fa fa-save me-1"></i>保存修改
+            </button>
+          </div>
+        </form>
+
+        <hr style="margin:32px 0;border-color:var(--border);">
+
+        <!-- 密码修改 -->
+        <h5 style="font-weight:700;margin-bottom:20px;"><i class="fa fa-lock me-2" style="color:var(--primary);"></i>修改密码</h5>
+        <form method="POST" action="{{ url_for('auth.profile') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="change_password">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">当前密码</label>
+              <input type="password" name="old_password" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">新密码</label>
+              <input type="password" name="new_password" class="form-control" required minlength="6">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">确认新密码</label>
+              <input type="password" name="new_password2" class="form-control" required>
+            </div>
+          </div>
+          <div class="mt-3">
+            <button type="submit" class="btn btn-outline-success" style="border-color:var(--primary);color:var(--primary);font-weight:700;">
+              <i class="fa fa-key me-1"></i>修改密码
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

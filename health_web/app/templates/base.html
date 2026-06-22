@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}健康管理平台{% endblock %}</title>
+  <!-- Bootstrap 5.3 -->
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css">
+  <!-- Font Awesome 4.7 -->
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <!-- 自定义样式 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- 主题初始化（防闪烁） -->
+  <script>
+    (function() {
+      var t = localStorage.getItem('hp-theme') || 'system';
+      var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+    })();
+  </script>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- 移动端遮罩 -->
+<div id="sidebar-overlay" class="d-none" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1039;"></div>
+
+<!-- 侧边栏 -->
+<nav class="sidebar" id="app-sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon"><i class="fa fa-heartbeat"></i></div>
+    <div>
+      <div class="brand-name">健康管家</div>
+      <div class="brand-sub">AI 肥胖风险分析平台</div>
+    </div>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-section-title">概览</div>
+    <a href="{{ url_for('main.dashboard') }}" class="sidebar-link">
+      <i class="fa fa-home"></i> 仪表盘
+    </a>
+
+    <div class="nav-section-title">记录</div>
+    <a href="{{ url_for('diet.index') }}" class="sidebar-link">
+      <i class="fa fa-cutlery"></i> 饮食记录
+    </a>
+    <a href="{{ url_for('exercise.index') }}" class="sidebar-link">
+      <i class="fa fa-bicycle"></i> 运动记录
+    </a>
+    <a href="{{ url_for('recipe.index') }}" class="sidebar-link">
+      <i class="fa fa-book"></i> 菜谱库
+    </a>
+
+    <div class="nav-section-title">分析</div>
+    <a href="{{ url_for('analysis.index') }}" class="sidebar-link">
+      <i class="fa fa-bar-chart"></i> 数据分析
+    </a>
+    <a href="{{ url_for('predict.index') }}" class="sidebar-link">
+      <i class="fa fa-stethoscope"></i> 风险判定
+      <span style="background:#2d8653;color:#fff;font-size:8px;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:700;">创新</span>
+    </a>
+
+    <div class="nav-section-title">历史</div>
+    <a href="{{ url_for('diet.history') }}" class="sidebar-link">
+      <i class="fa fa-list-ul"></i> 饮食历史
+    </a>
+    <a href="{{ url_for('exercise.history') }}" class="sidebar-link">
+      <i class="fa fa-history"></i> 运动历史
+    </a>
+
+    <div class="nav-section-title">研究</div>
+    <a href="{{ url_for('research.index') }}" class="sidebar-link">
+      <i class="fa fa-flask"></i> 数据分析展示
+    </a>
+
+    {% if current_user.is_authenticated %}
+    <div class="nav-section-title">账户</div>
+    <a href="{{ url_for('auth.profile') }}" class="sidebar-link">
+      <i class="fa fa-user-circle"></i> 个人资料
+    </a>
+    <a href="{{ url_for('auth.logout') }}" class="sidebar-link">
+      <i class="fa fa-sign-out"></i> 退出登录
+    </a>
+    {% else %}
+    <div class="nav-section-title">账户</div>
+    <a href="{{ url_for('auth.login') }}" class="sidebar-link">
+      <i class="fa fa-sign-in"></i> 登录
+    </a>
+    <a href="{{ url_for('auth.register') }}" class="sidebar-link">
+      <i class="fa fa-user-plus"></i> 注册
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="sidebar-footer">
+    健康管家 &copy; 2026
+  </div>
+</nav>
+
+<!-- 主内容区 -->
+<div class="main-content">
+  <!-- Topbar -->
+  <div class="topbar">
+    <button id="sidebar-toggle" class="btn btn-sm d-lg-none" style="background:none;border:none;font-size:20px;color:var(--text-main);">
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="topbar-title">{% block topbar_title %}健康管家{% endblock %}</div>
+    <div class="topbar-actions">
+      {% block topbar_actions %}
+      <!-- 主题切换 -->
+      <button class="theme-toggle-btn" id="themeToggleBtn" title="切换主题">
+        <i class="fa fa-moon-o theme-icon" id="themeIcon"></i>
+        <span class="d-none d-sm-inline" id="themeLabel">深色</span>
+      </button>
+      {% if current_user.is_authenticated %}
+      <a href="{{ url_for('auth.profile') }}" class="d-flex align-items-center gap-2 text-decoration-none">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;">
+          {{ (current_user.nickname or current_user.username)[0].upper() }}
+        </div>
+        <span class="d-none d-md-inline" style="font-size:14px;font-weight:600;color:var(--text-main);">
+          {{ current_user.nickname or current_user.username }}
+        </span>
+      </a>
+      {% else %}
+      <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">登录</a>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-sm">注册</a>
+      {% endif %}
+      {% endblock %}
+    </div>
+  </div>
+
+  <!-- 主体 -->
+  <div class="page-body">
+    <!-- Flash 消息 -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else ('danger' if category == 'danger' else ('warning' if category == 'warning' else 'info')) }} alert-dismissible fade show" role="alert" style="border-radius:var(--radius-sm);font-size:14px;">
+          <i class="fa fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<!-- Bootstrap 5.3 JS -->
+<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<!-- ECharts 5.4 -->
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+<!-- 全局 CSRF Token 配置（必须在 app.js 之前） -->
+<script>
+  // 全局 CSRF Token
+  window.CSRF_TOKEN = "{{ csrf_token() }}";
+  
+  // 为 fetch API 自动添加 CSRF Token
+  const originalFetch = window.fetch;
+  window.fetch = function(url, options = {}) {
+    options = options || {};
+    options.headers = options.headers || {};
+    
+    // 非 GET/HEAD/OPTIONS 请求自动添加 CSRF Token
+    const method = (options.method || 'GET').toUpperCase();
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      // 优先使用已有的 headers 对象
+      if (options.headers instanceof Headers) {
+        if (!options.headers.has('X-CSRFToken')) {
+          options.headers.append('X-CSRFToken', window.CSRF_TOKEN);
+        }
+      } else {
+        if (!options.headers['X-CSRFToken']) {
+          options.headers['X-CSRFToken'] = window.CSRF_TOKEN;
+        }
+      }
+    }
+    return originalFetch(url, options);
+  };
+  
+  // 如果使用 jQuery，自动配置 CSRF
+  if (typeof jQuery !== 'undefined') {
+    jQuery.ajaxSetup({
+      beforeSend: function(xhr, settings) {
+        if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+          xhr.setRequestHeader("X-CSRFToken", window.CSRF_TOKEN);
+        }
+      }
+    });
+  }
+  
+  // 辅助函数：获取表单数据的 CSRF 安全版本
+  window.getFormData = function(form) {
+    const formData = new FormData(form);
+    if (!formData.has('csrf_token')) {
+      formData.append('csrf_token', window.CSRF_TOKEN);
+    }
+    return formData;
+  };
+</script>
+<!-- 全局 JS -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

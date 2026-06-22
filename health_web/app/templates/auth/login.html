@@ -1,0 +1,41 @@
+{% extends "auth_base.html" %}
+{% block title %}登录 - 健康管家{% endblock %}
+{% block auth_title %}登录{% endblock %}
+{% block auth_sub %}欢迎回来，请登录您的账户{% endblock %}
+
+{% block auth_form %}
+<form method="POST" action="{{ url_for('auth.login') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3">
+    <label class="form-label" style="font-size:13px;font-weight:600;">用户名 / 邮箱</label>
+    <div class="input-icon-wrap">
+      <i class="fa fa-user input-icon"></i>
+      <input type="text" name="username" class="form-control" placeholder="输入用户名或邮箱" required autofocus value="{{ username or '' }}">
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" style="font-size:13px;font-weight:600;">密码</label>
+    <div class="input-icon-wrap">
+      <i class="fa fa-lock input-icon"></i>
+      <input type="password" name="password" class="form-control" placeholder="输入密码" required>
+    </div>
+  </div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <label class="form-check-label" style="font-size:13px;">
+      <input type="checkbox" name="remember" class="form-check-input"> 记住我
+    </label>
+    <a href="#" style="font-size:13px;color:var(--primary);">忘记密码？</a>
+  </div>
+  <button type="submit" class="btn btn-success w-100" style="background:var(--primary);border:none;font-weight:700;padding:10px;">
+    <i class="fa fa-sign-in me-1"></i>登录
+  </button>
+</form>
+{% endblock %}
+
+{% block auth_footer %}
+<p style="color:var(--text-muted);font-size:13px;margin:0;">
+  还没有账户？ <a href="{{ url_for('auth.register') }}" style="color:var(--primary);font-weight:700;">立即注册</a>
+  &nbsp;|&nbsp;
+  <a href="{{ url_for('main.dashboard') }}" style="color:var(--text-muted);">查看演示数据</a>
+</p>
+{% endblock %}

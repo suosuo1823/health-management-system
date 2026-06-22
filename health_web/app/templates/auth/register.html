@@ -1,0 +1,67 @@
+{% extends "auth_base.html" %}
+{% block title %}注册 - 健康管家{% endblock %}
+{% block auth_title %}创建账户{% endblock %}
+{% block auth_sub %}开始您的健康管理之旅{% endblock %}
+
+{% block auth_form %}
+<form method="POST" action="{{ url_for('auth.register') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label" style="font-size:13px;font-weight:600;">用户名</label>
+      <input type="text" name="username" class="form-control" placeholder="设置用户名" required value="{{ username or '' }}">
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label" style="font-size:13px;font-weight:600;">邮箱</label>
+      <input type="email" name="email" class="form-control" placeholder="电子邮箱" required value="{{ email or '' }}">
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label" style="font-size:13px;font-weight:600;">真实姓名</label>
+      <input type="text" name="realname" class="form-control" placeholder="真实姓名（选填）" value="{{ realname or '' }}">
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label" style="font-size:13px;font-weight:600;">性别</label>
+      <select name="gender" class="form-select">
+        <option value="">请选择</option>
+        <option value="male" {{ 'selected' if gender=='male' else '' }}>男</option>
+        <option value="female" {{ 'selected' if gender=='female' else '' }}>女</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label" style="font-size:13px;font-weight:600;">密码</label>
+      <input type="password" name="password" class="form-control" placeholder="至少6位" required>
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label" style="font-size:13px;font-weight:600;">确认密码</label>
+      <input type="password" name="password2" class="form-control" placeholder="再次输入密码" required>
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" style="font-size:13px;font-weight:600;">身高 (cm)</label>
+    <input type="number" name="height" class="form-control" placeholder="如：170" min="100" max="250" value="{{ height or '' }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label" style="font-size:13px;font-weight:600;">体重 (kg)</label>
+    <input type="number" name="weight" class="form-control" placeholder="如：65" min="30" max="300" step="0.1" value="{{ weight or '' }}">
+  </div>
+  <div class="form-check mb-3">
+    <input type="checkbox" class="form-check-input" id="agree" required>
+    <label class="form-check-label" for="agree" style="font-size:12px;color:var(--text-muted);">
+      我已阅读并同意 <a href="#" style="color:var(--primary);">《服务条款》</a> 和 <a href="#" style="color:var(--primary);">《隐私政策》</a>
+    </label>
+  </div>
+  <button type="submit" class="btn btn-success w-100" style="background:var(--primary);border:none;font-weight:700;padding:10px;">
+    <i class="fa fa-user-plus me-1"></i>注册账户
+  </button>
+</form>
+{% endblock %}
+
+{% block auth_footer %}
+<p style="color:var(--text-muted);font-size:13px;margin:0;">
+  已有账户？ <a href="{{ url_for('auth.login') }}" style="color:var(--primary);font-weight:700;">立即登录</a>
+</p>
+{% endblock %}

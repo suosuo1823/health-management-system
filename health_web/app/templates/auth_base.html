@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}健康管家{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="auth-page">
+
+<!-- 背景装饰 -->
+<div class="auth-bg-deco"></div>
+
+<div class="auth-wrapper">
+  <!-- 品牌 -->
+  <div class="auth-brand">
+    <div class="brand-icon-lg"><i class="fa fa-heartbeat"></i></div>
+    <h2 class="brand-title-lg">健康管家</h2>
+    <p class="brand-sub-lg">AI 肥胖风险分析平台</p>
+  </div>
+
+  <!-- 表单卡片 -->
+  <div class="auth-card">
+    <div class="auth-card-header">
+      <h3 class="auth-card-title">{% block auth_title %}登录{% endblock %}</h3>
+      <p class="auth-card-sub">{% block auth_sub %}欢迎回来，请登录您的账户{% endblock %}</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'danger' if cat=='danger' else 'success' if cat=='success' else 'warning' }} py-2 mb-3" style="font-size:13px;border-radius:var(--radius-sm);">
+          <i class="fa fa-{{ 'times-circle' if cat=='danger' else 'check-circle' }} me-1"></i> {{ msg }}
+        </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block auth_form %}{% endblock %}
+  </div>
+
+  <div class="auth-footer-link">
+    {% block auth_footer %}{% endblock %}
+  </div>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

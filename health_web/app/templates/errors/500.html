@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>500 - 服务器错误 - 健康管家</title>
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style>
+    :root {
+      --primary: #2d8653; --primary-light: #3da66a; --primary-dark: #1e6640;
+      --accent: #52c97f; --accent-soft: #d4f5e2; --bg-body: #f4faf6;
+      --bg-card: #ffffff; --text-main: #1c3028; --text-muted: #6b8a77;
+    }
+    body { font-family: 'Segoe UI','PingFang SC',sans-serif; background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }
+    .error-wrap { text-align: center; max-width: 480px; padding: 24px; }
+    .error-code { font-size: 120px; font-weight: 900; color: #fde8ea; line-height: 1; margin-bottom: 16px; -webkit-text-stroke: 2px #dc3545; }
+    .error-icon { width: 100px; height: 100px; background: linear-gradient(135deg, #dc3545, #c82333); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; color: #fff; }
+    .error-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+    .error-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; line-height: 1.7; }
+    .btn-home { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; padding: 12px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(45,134,83,.3); transition: all .25s; }
+    .btn-home:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(45,134,83,.4); color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="error-wrap">
+    <div class="error-code">500</div>
+    <div class="error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+    <div class="error-title">服务器出了点问题</div>
+    <div class="error-desc">
+      抱歉，服务器遇到了意外状况，无法完成您的请求。<br>
+      请稍后重试，或返回首页重新开始。
+    </div>
+    <a href="/" class="btn-home"><i class="fa fa-home"></i>返回首页</a>
+  </div>
+</body>
+</html>

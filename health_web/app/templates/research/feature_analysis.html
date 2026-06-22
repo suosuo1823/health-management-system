@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}特征分析 - 研究者专区{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('research.index') }}">数据分析展示</a></li>
+            <li class="breadcrumb-item active">特征分析</li>
+        </ol>
+    </nav>
+
+    <h3 class="mb-4"><i class="fa fa-list-alt text-primary me-2"></i>特征工程详情</h3>
+
+    <div class="row g-4">
+        <!-- 特征编码说明 -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="fa fa-code me-2"></i>特征编码规则
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>原始特征</th>
+                                <th>编码方式</th>
+                                <th>取值说明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Gender</td>
+                                <td>二值编码</td>
+                                <td>Male=1, Female=0</td>
+                            </tr>
+                            <tr>
+                                <td>Age</td>
+                                <td>标准化</td>
+                                <td>StandardScaler</td>
+                            </tr>
+                            <tr>
+                                <td>Height</td>
+                                <td>标准化</td>
+                                <td>StandardScaler</td>
+                            </tr>
+                            <tr>
+                                <td>Weight</td>
+                                <td>标准化</td>
+                                <td>StandardScaler</td>
+                            </tr>
+                            <tr>
+                                <td>family_history_with_overweight</td>
+                                <td>二值编码</td>
+                                <td>yes=1, no=0</td>
+                            </tr>
+                            <tr>
+                                <td>FAVC</td>
+                                <td>二值编码</td>
+                                <td>yes=1, no=0</td>
+                            </tr>
+                            <tr>
+                                <td>FCVC</td>
+                                <td>标准化</td>
+                                <td>蔬菜摄入频率</td>
+                            </tr>
+                            <tr>
+                                <td>NCP</td>
+                                <td>标准化</td>
+                                <td>主餐数量</td>
+                            </tr>
+                            <tr>
+                                <td>CAEC</td>
+                                <td>有序编码</td>
+                                <td>no=0, Sometimes=1, Frequently=2, Always=3</td>
+                            </tr>
+                            <tr>
+                                <td>SMOKE</td>
+                                <td>二值编码</td>
+                                <td>yes=1, no=0</td>
+                            </tr>
+                            <tr>
+                                <td>CH2O</td>
+                                <td>标准化</td>
+                                <td>每日饮水量</td>
+                            </tr>
+                            <tr>
+                                <td>SCC</td>
+                                <td>二值编码</td>
+                                <td>yes=1, no=0</td>
+                            </tr>
+                            <tr>
+                                <td>FAF</td>
+                                <td>标准化</td>
+                                <td>体育活动频率</td>
+                            </tr>
+                            <tr>
+                                <td>TUE</td>
+                                <td>标准化</td>
+                                <td>使用技术设备时间</td>
+                            </tr>
+                            <tr>
+                                <td>CALC</td>
+                                <td>有序编码</td>
+                                <td>no=0, Sometimes=1, Frequently=2, Always=3</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 连续型特征 -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <i class="fa fa-sliders me-2"></i>连续型特征（标准化）
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">以下特征在训练前经过 StandardScaler 标准化处理：</p>
+                    <div class="list-group">
+                        {% for col in feature_info.continuous_cols %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fa fa-check-circle text-success me-2"></i>{{ col }}</span>
+                            <span class="badge bg-info">StandardScaler</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="alert alert-light mt-3">
+                        <small class="text-muted">
+                            <i class="fa fa-info-circle me-1"></i>
+                            标准化公式：z = (x - μ) / σ
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 预处理数据样本 -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fa fa-table me-2"></i>预处理后数据样本（前10行）
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    {% if X_train_sample %}
+                                        {% for key in X_train_sample[0].keys() %}
+                                        <th>{{ key }}</th>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in X_train_sample %}
+                                <tr>
+                                    {% for value in row.values() %}
+                                    <td>{{ "%.3f"|format(value) if value is number else value }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

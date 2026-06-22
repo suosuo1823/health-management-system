@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}首页 - 健康管家{% endblock %}
+
+{% block content %}
+<!-- 首页不需要侧栏布局，用全屏 Hero -->
+<style>
+  .main-content { margin-left: 0; }
+  .sidebar { display: none; }
+  .topbar  { display: none; }
+  .page-body { padding: 0; }
+</style>
+
+<!-- Hero -->
+<section class="hero-section">
+  <div class="container position-relative" style="z-index:2;">
+    <div class="row align-items-center" style="min-height:100vh;padding:80px 0;">
+      <div class="col-lg-6 mb-5 mb-lg-0">
+        <div class="hero-badge"><i class="fa fa-leaf"></i> AI 驱动的健康管理</div>
+        <h1 class="hero-title">智慧管理<br><span>健康生活</span><br>从今天开始</h1>
+        <p class="hero-desc">
+          基于 XGBoost 机器学习模型，实时预测肥胖风险等级；全面记录饮食与运动数据，用数据说话，让健康看得见。
+        </p>
+        <div class="hero-cta-group">
+          <a href="{{ url_for('auth.register') }}" class="btn-hero-primary">
+            <i class="fa fa-rocket me-2"></i>免费开始使用
+          </a>
+          <a href="{{ url_for('main.dashboard') }}" class="btn-hero-outline">
+            <i class="fa fa-eye me-2"></i>查看演示数据
+          </a>
+        </div>
+        <div class="d-flex gap-4 mt-4" style="flex-wrap:wrap;">
+          <div>
+            <div style="font-size:22px;font-weight:800;color:#fff;">91.1%</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.5);">模型准确率</div>
+          </div>
+          <div style="border-left:1px solid rgba(255,255,255,.15);padding-left:20px;">
+            <div style="font-size:22px;font-weight:800;color:#fff;">7 类</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.5);">肥胖等级判定</div>
+          </div>
+          <div style="border-left:1px solid rgba(255,255,255,.15);padding-left:20px;">
+            <div style="font-size:22px;font-weight:800;color:#fff;">全功能</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.5);">饮食+运动+分析</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="feature-card h-100">
+              <div class="feature-icon"><i class="fa fa-cutlery"></i></div>
+              <div style="color:#fff;font-weight:700;font-size:15px;">饮食记录</div>
+              <div style="color:rgba(255,255,255,.55);font-size:13px;margin-top:6px;">精准追踪每餐热量与营养素，支持搜索食物库快速录入</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="feature-card h-100">
+              <div class="feature-icon"><i class="fa fa-bicycle"></i></div>
+              <div style="color:#fff;font-weight:700;font-size:15px;">运动记录</div>
+              <div style="color:rgba(255,255,255,.55);font-size:13px;margin-top:6px;">自动计算热量消耗，支持30+种运动类型</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="feature-card h-100">
+              <div class="feature-icon"><i class="fa fa-bar-chart"></i></div>
+              <div style="color:#fff;font-weight:700;font-size:15px;">数据分析</div>
+              <div style="color:rgba(255,255,255,.55);font-size:13px;margin-top:6px;">ECharts 可视化趋势，热量收支一目了然</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="feature-card h-100">
+              <div class="feature-icon"><i class="fa fa-stethoscope"></i></div>
+              <div style="color:#fff;font-weight:700;font-size:15px;">风险判定</div>
+              <div style="color:rgba(255,255,255,.55);font-size:13px;margin-top:6px;">XGBoost 模型实时预测肥胖风险，AUC 0.991</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 测试账号提示卡 -->
+        <div style="margin-top:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:20px;">
+          <div style="color:rgba(255,255,255,.8);font-size:13px;font-weight:600;margin-bottom:10px;">
+            <i class="fa fa-user-circle me-2" style="color:var(--accent);"></i>测试账号（全功能全数据）
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;">
+            <div style="background:rgba(255,255,255,.05);padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.1);">
+              <div style="color:rgba(255,255,255,.5);font-size:11px;">用户名</div>
+              <div style="color:#fff;font-weight:700;font-size:15px;">demo</div>
+            </div>
+            <div style="background:rgba(255,255,255,.05);padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.1);">
+              <div style="color:rgba(255,255,255,.5);font-size:11px;">密码</div>
+              <div style="color:#fff;font-weight:700;font-size:15px;">demo123456</div>
+            </div>
+          </div>
+          <a href="{{ url_for('auth.login') }}" style="display:inline-block;margin-top:12px;background:rgba(82,201,127,.2);border:1px solid rgba(82,201,127,.4);color:var(--accent);padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+            <i class="fa fa-sign-in me-1"></i>一键登录体验
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

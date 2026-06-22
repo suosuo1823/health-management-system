@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# 后台管理/用户数据禁止爬取
+Disallow: /auth/
+Disallow: /diet/
+Disallow: /exercise/
+Disallow: /analysis/
+Disallow: /predict/
+Disallow: /health/
+Disallow: /api/
+Disallow: /recipes/
+
+Sitemap: /sitemap.xml

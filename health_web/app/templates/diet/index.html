@@ -1,0 +1,509 @@
+{% extends "base.html" %}
+{% block title %}饮食记录 - 健康管家{% endblock %}
+{% block topbar_title %}饮食记录{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('recipe.index') }}" class="btn btn-sm btn-outline-success me-2"
+     style="border-color:var(--primary);color:var(--primary);" title="从菜谱库添加">
+    <i class="fa fa-book me-1"></i><span class="d-none d-md-inline">菜谱库</span>
+  </a>
+  {% if current_user.is_authenticated %}
+  <a href="{{ url_for('auth.profile') }}" class="d-flex align-items-center gap-2 text-decoration-none">
+    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;">
+      {{ (current_user.nickname or current_user.username)[0].upper() }}
+    </div>
+    <span class="d-none d-md-inline" style="font-size:14px;font-weight:600;color:var(--text-main);">
+      {{ current_user.nickname or current_user.username }}
+    </span>
+  </a>
+  {% else %}
+  <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">登录</a>
+  <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-sm">注册</a>
+  {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* 食物搜索下拉 */
+  .food-search-wrap { position: relative; }
+  .food-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: #fff; border: 1.5px solid var(--primary);
+    border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    box-shadow: var(--shadow-md); z-index: 200; max-height: 280px; overflow-y: auto;
+    display: none;
+  }
+  .food-dropdown.show { display: block; }
+  .food-item {
+    padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; transition: background .15s;
+  }
+  .food-item:last-child { border-bottom: none; }
+  .food-item:hover { background: var(--accent-soft); }
+  .food-item-name { font-size: 14px; font-weight: 600; color: var(--text-main); flex: 1; }
+  .food-item-cat { font-size: 11px; color: var(--text-muted); }
+  .food-item-cal { font-size: 12px; color: var(--primary); font-weight: 700; white-space: nowrap; }
+  .food-no-result { padding: 12px 14px; color: var(--text-muted); font-size: 13px; text-align: center; }
+  /* 营养预览条 */
+  .nutri-preview {
+    background: var(--accent-soft); border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 13px; margin-top: 8px;
+    border: 1px solid var(--border);
+  }
+  .nutri-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .nutri-row:last-child { margin-bottom: 0; }
+  .nutri-label { min-width: 60px; font-weight: 600; color: var(--text-main); }
+  .nutri-bar-wrap { flex: 1; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
+  .nutri-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+  .nutri-val { min-width: 70px; text-align: right; color: var(--text-muted); font-size: 12px; }
+  /* Tab 切换 */
+  .mode-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--bg-body); border-radius: var(--radius-sm); padding: 4px; }
+  .mode-tab {
+    flex: 1; text-align: center; padding: 8px 12px; border-radius: 6px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all .2s;
+    border: none; background: transparent; color: var(--text-muted);
+  }
+  .mode-tab.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  /* 快捷分类标签 */
+  .cat-tag {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; cursor: pointer; margin: 2px;
+    background: var(--bg-body); color: var(--text-muted);
+    border: 1px solid var(--border); transition: all .15s;
+  }
+  .cat-tag:hover, .cat-tag.active { background: var(--accent-soft); color: var(--primary); border-color: var(--primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 今日概览 -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(45,134,83,.1);color:var(--primary);"><i class="fa fa-fire"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_calories | round1 }}</div>
+        <div class="stat-label">今日摄入 (kcal)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(26,115,232,.1);color:#1a73e8;"><i class="fa fa-dashboard"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_protein | round1 }}g</div>
+        <div class="stat-label">蛋白质</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(240,165,0,.1);color:#f0a500;"><i class="fa fa-circle-o-notch"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_carb | round1 }}g</div>
+        <div class="stat-label">碳水化合物</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(123,47,247,.1);color:#7b2ff7;"><i class="fa fa-tint"></i></div>
+      <div>
+        <div class="stat-value">{{ summary.total_fat | round1 }}g</div>
+        <div class="stat-label">脂肪</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- 记录表单 -->
+  <div class="col-lg-5">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-3">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(45,134,83,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            <i class="fa fa-plus" style="color:var(--primary);font-size:16px;"></i>
+          </div>
+          <h5 style="font-weight:700;margin:0;">添加饮食记录</h5>
+        </div>
+
+        <!-- 模式切换 Tab -->
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="tab-quick" onclick="switchTab('quick')">
+            <i class="fa fa-search me-1"></i>快速选择
+          </button>
+          <button class="mode-tab" id="tab-manual" onclick="switchTab('manual')">
+            <i class="fa fa-edit me-1"></i>手动输入
+          </button>
+        </div>
+
+        <!-- 快速记录模式 -->
+        <div class="tab-panel active" id="panel-quick">
+          <form method="POST" action="{{ url_for('diet.index') }}" id="quick-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="record_mode" value="quick">
+            <input type="hidden" name="food_item_id" id="food_item_id" value="">
+            <input type="hidden" name="record_date" id="record_date_quick" value="{{ today_str }}">
+            <input type="hidden" name="meal_type" id="meal_type_quick" value="lunch">
+            <input type="hidden" name="food_name" id="food_name_quick" value="">
+            <input type="hidden" name="portion" id="portion_quick" value="">
+            <input type="hidden" name="calories" id="calories_quick" value="">
+            <input type="hidden" name="protein" id="protein_quick" value="">
+            <input type="hidden" name="carbs" id="carbs_quick" value="">
+            <input type="hidden" name="fat" id="fat_quick" value="">
+
+            <div class="mb-2">
+              <label class="form-label" style="font-size:13px;font-weight:600;">记录日期</label>
+              <input type="date" class="form-control" value="{{ today_str }}" max="{{ today_str }}"
+                     onchange="document.getElementById('record_date_quick').value=this.value">
+            </div>
+            <div class="mb-2">
+              <label class="form-label" style="font-size:13px;font-weight:600;">餐次</label>
+              <select class="form-select" id="meal_select_quick" onchange="document.getElementById('meal_type_quick').value=this.value">
+                <option value="breakfast">早餐</option>
+                <option value="lunch" selected>午餐</option>
+                <option value="dinner">晚餐</option>
+                <option value="snack">零食/加餐</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label" style="font-size:13px;font-weight:600;">搜索食物</label>
+              <div class="food-search-wrap">
+                <input type="text" id="food_search" class="form-control"
+                       placeholder="输入食物名称，如：鸡胸肉、西兰花、苹果..."
+                       autocomplete="off" onclick="showDropdown()">
+                <div class="food-dropdown" id="food_dropdown"></div>
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label" style="font-size:13px;font-weight:600;">份量 (g)</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="number" id="portion_gram" class="form-control"
+                       placeholder="100" min="1" max="5000" value="100"
+                       oninput="calcQuickNutri()">
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
+                  <input type="number" id="portion_count" class="form-control" style="width:60px;display:inline;"
+                         placeholder="份" min="0.5" step="0.5" oninput="calcFromCount()">
+                </span>
+              </div>
+              <div id="portion_hint" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+            </div>
+
+            <!-- 营养素实时预览 -->
+            <div class="nutri-preview" id="nutri_preview" style="display:none;">
+              <div class="nutri-row">
+                <span class="nutri-label">热量</span>
+                <div class="nutri-bar-wrap"><div class="nutri-bar-fill" id="nb_cal" style="width:0%;background:var(--primary);"></div></div>
+                <span class="nutri-val" id="nv_cal">0 kcal</span>
+              </div>
+              <div class="nutri-row">
+                <span class="nutri-label">蛋白质</span>
+                <div class="nutri-bar-wrap"><div class="nutri-bar-fill" id="nb_prot" style="width:0%;background:#1a73e8;"></div></div>
+                <span class="nutri-val" id="nv_prot">0 g</span>
+              </div>
+              <div class="nutri-row">
+                <span class="nutri-label">碳水</span>
+                <div class="nutri-bar-wrap"><div class="nutri-bar-fill" id="nb_carbs" style="width:0%;background:#f0a500;"></div></div>
+                <span class="nutri-val" id="nv_carbs">0 g</span>
+              </div>
+              <div class="nutri-row">
+                <span class="nutri-label">脂肪</span>
+                <div class="nutri-bar-wrap"><div class="nutri-bar-fill" id="nb_fat" style="width:0%;background:#7b2ff7;"></div></div>
+                <span class="nutri-val" id="nv_fat">0 g</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 mt-3"
+                    style="background:var(--primary);border:none;font-weight:700;padding:10px;"
+                    onclick="return submitQuickForm()">
+              <i class="fa fa-plus me-1"></i>添加记录
+            </button>
+          </form>
+        </div>
+
+        <!-- 手动输入模式（原有表单） -->
+        <div class="tab-panel" id="panel-manual">
+          <form method="POST" action="{{ url_for('diet.index') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="record_mode" value="manual">
+            <div class="mb-3">
+              <label class="form-label" style="font-size:13px;font-weight:600;">记录日期</label>
+              <input type="date" name="record_date" class="form-control" value="{{ today_str }}" max="{{ today_str }}" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" style="font-size:13px;font-weight:600;">餐次</label>
+              <select name="meal_type" class="form-select" required>
+                <option value="breakfast">早餐</option>
+                <option value="lunch">午餐</option>
+                <option value="dinner">晚餐</option>
+                <option value="snack">零食/加餐</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" style="font-size:13px;font-weight:600;">食物名称</label>
+              <input type="text" name="food_name" class="form-control" placeholder="如：米饭、红烧肉、西兰花" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" style="font-size:13px;font-weight:600;">份量</label>
+              <input type="text" name="portion" class="form-control" placeholder="如：100g / 1碗 / 2个" value="100g">
+            </div>
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label" style="font-size:13px;font-weight:600;">热量 (kcal)</label>
+                <input type="number" name="calories" class="form-control" placeholder="0" min="0" step="0.1" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label" style="font-size:13px;font-weight:600;">蛋白质 (g)</label>
+                <input type="number" name="protein" class="form-control" placeholder="0" min="0" step="0.1" value="0">
+              </div>
+              <div class="col-6">
+                <label class="form-label" style="font-size:13px;font-weight:600;">碳水 (g)</label>
+                <input type="number" name="carbs" class="form-control" placeholder="0" min="0" step="0.1" value="0">
+              </div>
+              <div class="col-6">
+                <label class="form-label" style="font-size:13px;font-weight:600;">脂肪 (g)</label>
+                <input type="number" name="fat" class="form-control" placeholder="0" min="0" step="0.1" value="0">
+              </div>
+            </div>
+            <div class="mb-3 mt-3">
+              <label class="form-label" style="font-size:13px;font-weight:600;">备注</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="可选备注..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-success w-100"
+                    style="background:var(--primary);border:none;font-weight:700;padding:10px;">
+              <i class="fa fa-plus me-1"></i>添加记录
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 今日记录列表 -->
+  <div class="col-lg-7">
+    <div class="card" style="border-radius:var(--radius);border:none;box-shadow:var(--shadow);">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div class="d-flex align-items-center">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(45,134,83,.1);display:flex;align-items:center;justify-content:center;margin-right:12px;">
+              <i class="fa fa-list" style="color:var(--primary);font-size:16px;"></i>
+            </div>
+            <h5 style="font-weight:700;margin:0;">{{ today_str }} 饮食记录</h5>
+          </div>
+          <a href="{{ url_for('diet.history') }}" class="btn btn-sm btn-outline-success" style="border-color:var(--primary);color:var(--primary);">
+            <i class="fa fa-history me-1"></i>历史
+          </a>
+        </div>
+
+        {% if today_records %}
+        <div class="table-responsive">
+          <table class="table table-hover" style="font-size:13px;">
+            <thead>
+              <tr>
+                <th>餐次</th>
+                <th>食物</th>
+                <th>份量</th>
+                <th>热量</th>
+                <th>P/C/F</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in today_records %}
+              <tr>
+                <td>
+                  <span class="badge meal-badge meal-{{ r.meal_type }}">
+                    {{ '早餐' if r.meal_type=='breakfast' else ('午餐' if r.meal_type=='lunch' else ('晚餐' if r.meal_type=='dinner' else '零食')) }}
+                  </span>
+                </td>
+                <td style="font-weight:600;">{{ r.food_name }}</td>
+                <td style="color:var(--text-muted);">{{ r.portion }}</td>
+                <td><span style="color:var(--primary);font-weight:700;">{{ r.calories | round1 }}kcal</span></td>
+                <td style="color:var(--text-muted);font-size:12px;">{{ r.protein | round1 }}g / {{ r.carbs | round1 }}g / {{ r.fat | round1 }}g</td>
+                <td>
+                  <button class="btn btn-sm" style="color:#dc3545;padding:2px 6px;border:none;background:none;"
+                          onclick="confirmDelete({{ r.id }})" title="删除">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5" style="color:var(--text-muted);">
+          <i class="fa fa-cutlery" style="font-size:40px;opacity:.3;margin-bottom:12px;display:block;"></i>
+          <p style="margin:0;font-size:14px;">今日暂无饮食记录</p>
+          <p style="font-size:12px;">在左侧添加您的第一餐吧</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认 Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:var(--radius-md);">
+      <div class="modal-header" style="border-bottom:1px solid var(--border);">
+        <h6 class="modal-title" style="font-weight:700;"><i class="fa fa-exclamation-triangle me-2" style="color:#dc3545;"></i>确认删除</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:14px;color:var(--text-muted);">
+        删除后将无法恢复，确认删除这条饮食记录吗？
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border);">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <form method="POST" id="deleteForm" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm">确认删除</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Tab 切换 ────────────────────────────────────────────────────
+function switchTab(mode) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  if (mode === 'quick') {
+    document.getElementById('tab-quick').classList.add('active');
+    document.getElementById('panel-quick').classList.add('active');
+  } else {
+    document.getElementById('tab-manual').classList.add('active');
+    document.getElementById('panel-manual').classList.add('active');
+  }
+}
+
+// ── 食物搜索 ────────────────────────────────────────────────────
+let _selectedFood = null;
+let _searchTimer = null;
+
+const foodSearch = document.getElementById('food_search');
+const dropdown   = document.getElementById('food_dropdown');
+
+foodSearch.addEventListener('input', function () {
+  clearTimeout(_searchTimer);
+  const q = this.value.trim();
+  if (!q) { hideDropdown(); return; }
+  _searchTimer = setTimeout(() => fetchFood(q), 250);
+});
+
+foodSearch.addEventListener('focus', function () {
+  if (this.value.trim()) fetchFood(this.value.trim());
+});
+
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('.food-search-wrap')) hideDropdown();
+});
+
+function showDropdown() {
+  dropdown.classList.add('show');
+}
+
+function hideDropdown() {
+  dropdown.classList.remove('show');
+}
+
+async function fetchFood(q) {
+  const resp = await fetch(`/diet/api/food-search?q=${encodeURIComponent(q)}&limit=15`);
+  const data = await resp.json();
+  renderDropdown(data.items);
+}
+
+function renderDropdown(items) {
+  if (!items.length) {
+    dropdown.innerHTML = '<div class="food-no-result">未找到匹配食物，试试其他关键词</div>';
+    showDropdown(); return;
+  }
+  dropdown.innerHTML = items.map(f => `
+    <div class="food-item" onclick="selectFood(${f.id},${f.calories_per_100g},${f.protein_per_100g},${f.carbs_per_100g},${f.fat_per_100g},${f.fiber_per_100g},${f.calories_per_100g})">
+      <div style="flex:1;">
+        <div class="food-item-name">${f.name}</div>
+        <div class="food-item-cat">${f.category}</div>
+      </div>
+      <div class="food-item-cal">${f.calories_per_100g} kcal/100g</div>
+    </div>
+  `).join('');
+  showDropdown();
+}
+
+function selectFood(id, cal100, prot100, carbs100, fat100, fib100, calSingle) {
+  _selectedFood = { id, cal100, prot100, carbs100, fat100, fib100 };
+  foodSearch.value = '已选食物: ' + (cal100 > 0 ? '含营养数据' : 'ID=' + id);
+  foodSearch.style.color = 'var(--primary)';
+  document.getElementById('food_item_id').value = id;
+  hideDropdown();
+  calcQuickNutri();
+}
+
+// ── 营养素实时计算 ───────────────────────────────────────────────
+function calcQuickNutri() {
+  if (!_selectedFood) {
+    document.getElementById('nutri_preview').style.display = 'none';
+    return;
+  }
+  const g = parseFloat(document.getElementById('portion_gram').value) || 100;
+  const ratio = g / 100;
+  const cal  = (_selectedFood.cal100   * ratio).toFixed(1);
+  const prot = (_selectedFood.prot100  * ratio).toFixed(1);
+  const carbs= (_selectedFood.carbs100 * ratio).toFixed(1);
+  const fat  = (_selectedFood.fat100   * ratio).toFixed(1);
+
+  document.getElementById('nutri_preview').style.display = 'block';
+  document.getElementById('nv_cal').textContent   = cal  + ' kcal';
+  document.getElementById('nv_prot').textContent  = prot + ' g';
+  document.getElementById('nv_carbs').textContent = carbs+ ' g';
+  document.getElementById('nv_fat').textContent   = fat  + ' g';
+  // 进度条（以指南目标估算）
+  document.getElementById('nb_cal').style.width   = Math.min(100, cal / 25)  + '%';
+  document.getElementById('nb_prot').style.width  = Math.min(100, prot / 3)  + '%';
+  document.getElementById('nb_carbs').style.width = Math.min(100, carbs / 8) + '%';
+  document.getElementById('nb_fat').style.width   = Math.min(100, fat / 2)   + '%';
+}
+
+function calcFromCount() {
+  // 可按份数计算（留作扩展）
+  const count = parseFloat(document.getElementById('portion_count').value) || 0;
+  if (count > 0) {
+    const g = count * 100;
+    document.getElementById('portion_gram').value = Math.round(g);
+    calcQuickNutri();
+    document.getElementById('portion_hint').textContent = `≈ ${count} 份 (每份100g)`;
+  }
+}
+
+// ── 提交快速表单 ────────────────────────────────────────────────
+function submitQuickForm() {
+  if (!_selectedFood) {
+    HP.toast('请先搜索并选择一个食物', 'warning'); return false;
+  }
+  const g = parseFloat(document.getElementById('portion_gram').value) || 100;
+  const ratio = g / 100;
+  document.getElementById('portion_quick').value = g + 'g';
+  document.getElementById('food_name_quick').value = '数据库食物(ID:' + _selectedFood.id + ')';
+  document.getElementById('calories_quick').value = (_selectedFood.cal100   * ratio).toFixed(1);
+  document.getElementById('protein_quick').value  = (_selectedFood.prot100  * ratio).toFixed(1);
+  document.getElementById('carbs_quick').value    = (_selectedFood.carbs100 * ratio).toFixed(1);
+  document.getElementById('fat_quick').value      = (_selectedFood.fat100   * ratio).toFixed(1);
+  return true;
+}
+
+// ── 删除确认 ────────────────────────────────────────────────────
+function confirmDelete(recordId) {
+  document.getElementById('deleteForm').action = '/diet/delete/' + recordId;
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}
